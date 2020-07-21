@@ -1,0 +1,8 @@
+*
+!py_example
+!requirements.txt
+*.pyc
+*.log.*
+*.log
+__pycache__
+*.csv
