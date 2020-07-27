@@ -13,3 +13,7 @@ Then run `make install`.
 
 In Visual Studio Code unit tests should be auto discovered as well as linting and intellisense.
 
+## TODO
+
+- Fix `Dockerfile`
+- Fix `docs`

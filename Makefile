@@ -1,8 +1,12 @@
-files = py_example test *.py
-test_files = *
+.PHONY: test lint fix install report
+
+project_folder = src
+tests_folder = test
+files = $(project_folder) $(test_folder) *.py
+test_files = test_*.py
 
 test:
-	pytest -s -v test/test_$(test_files).py --doctest-modules --cov py_example --cov-config=.coveragerc --cov-report term-missing
+	pytest -s -v $(tests_folder)/$(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
 
 lint:
 	flake8 $(files)
@@ -11,9 +15,4 @@ fix:
 	autopep8 --in-place -r $(files)
 
 install:
-	pip install -U -r requirements.txt
-
-report:
-	codecov
-
-.PHONY: test lint fix install report
+	pip3 install -U -r requirements.txt

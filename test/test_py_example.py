@@ -1,5 +1,5 @@
-from py_example import foo as foo
-from py_example.bar import utils as bar
+from src import foo as foo
+from src.bar import utils as bar
 import unittest
 
 
