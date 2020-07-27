@@ -1,12 +1,12 @@
 .PHONY: test lint fix install report
 
 project_folder = src
-tests_folder = test
-files = $(project_folder) $(test_folder) *.py
+test_folder = test
+files = $(project_folder)/*.py $(test_folder)/*.py
 test_files = test_*.py
 
 test:
-	pytest -s -v $(tests_folder)/$(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
+	pytest -s -v $(test_folder)/$(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
 
 lint:
 	flake8 $(files)
