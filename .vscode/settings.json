@@ -3,6 +3,9 @@
   "python.linting.pycodestyleEnabled": false,
   "python.linting.pydocstyleEnabled": false,
   "python.linting.flake8Enabled": true,
+  "python.linting.flake8Args": [
+    "--extend-ignore=W292"
+  ],
   "python.linting.enabled": true,
   "python.testing.pytestArgs": [
     "test"
@@ -11,5 +14,6 @@
   "python.testing.nosetestsEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.envFile": "${workspaceFolder}/.env",
-  "python.languageServer": "Jedi"
+  "python.languageServer": "Jedi",
+  "files.trimTrailingWhitespace": true
 }

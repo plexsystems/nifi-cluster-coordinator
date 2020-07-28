@@ -1,18 +1,26 @@
-.PHONY: test lint fix install report
+.PHONY: test lint fix install build
 
 project_folder = src
 test_folder = test
-files = $(project_folder)/*.py $(test_folder)/*.py
-test_files = test_*.py
+main_file = main.py
+files = $(wildcard **/.py)
+test_files = $(wildcard **/test_*.py)
+
+run: fix
+	@python3 $(project_folder)/$(main_file) --loglevel DEBUG
 
 test:
-	pytest -s -v $(test_folder)/$(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
+	@pytest -s -v $(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
 
+# Ignoring W292 on linting because autopep8 can't seem to fix it
 lint:
-	flake8 $(files)
+	@flake8 --statistics --extend-ignore=W292 $(project_folder) $(test_folder)
 
 fix:
-	autopep8 --in-place -r $(files)
+	@autopep8 --aggressive --in-place -r $(project_folder) $(test_folder)
 
 install:
-	pip3 install -U -r requirements.txt
+	@pip3 install -U -r requirements.txt
+
+build:
+	@docker build . -t nifi-cluster-coordinator:$(dockertag)

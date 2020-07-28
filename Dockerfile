@@ -1,6 +1,6 @@
 # TODO: This is incomplete, this still needs to be fixed
 
-FROM python:3
+FROM python:slim
 
 WORKDIR /usr/src/app
 
@@ -10,4 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "start.py"]
+CMD ["python", "/usr/src/app/src/main.py"]
