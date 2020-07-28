@@ -6,7 +6,7 @@ This is useful for people who need to maintain the same version of a flow on sep
 
 ## Getting Started
 
-The following packages need to be available on your system
+The following packages need to be available on your system as they are required for the [nipyapi](https://nipyapi.readthedocs.io/en/latest/) package.
 
 - `libxml2-dev`
 - `libxslt-dev`
@@ -19,3 +19,7 @@ source .venv/bin/activate
 ```
 
 Run `make dev-setup`.
+
+## Configuration
+
+Create a copy of the `nifi-cluster-coordinator.example.yaml` and name it `nifi-cluster-coordinator.yaml` and update it with your cluster configurations.

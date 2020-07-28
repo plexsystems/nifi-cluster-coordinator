@@ -74,3 +74,6 @@ tmp/
 
 .vscode/*
 !.vscode/settings.json
+
+# Project Specific
+conf/nifi-cluster-coordinator.yaml

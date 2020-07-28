@@ -1,13 +1,15 @@
 .PHONY: test lint fix install build
 
-project_folder = src
+project_folder = nifi_cluster_coordinator
 test_folder = test
-main_file = main.py
+entry_file = main.py
 files = $(wildcard **/*.py)
 test_files = $(wildcard **/test_*.py)
+config_file = conf/nifi-cluster-coordinator.yaml
+default_log_level = DEBUG
 
 run: fix
-	@python3 $(project_folder)/$(main_file) --loglevel DEBUG
+	@python3 $(project_folder)/$(entry_file) --loglevel $(default_log_level) --configfile $(config_file)
 
 test:
 	@pytest -s -v $(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
