@@ -3,7 +3,7 @@
 project_folder = src
 test_folder = test
 main_file = main.py
-files = $(wildcard **/.py)
+files = $(wildcard **/*.py)
 test_files = $(wildcard **/test_*.py)
 
 run: fix
@@ -22,5 +22,8 @@ fix:
 install:
 	@pip3 install -U -r requirements.txt
 
-build:
+build: lint clean
 	@docker build . -t nifi-cluster-coordinator:$(dockertag)
+
+clean:
+	@find . -name '*.pyc' -exec rm --force {} +

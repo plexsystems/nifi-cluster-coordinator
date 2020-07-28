@@ -5,21 +5,16 @@ import argparse
 
 def main(args):
     logger = logging.getLogger(__name__)
+    logger.info("Hello world")
 
     # Load State
     # If no state present, create a new empty state
-
-    # Load Cluster definitions
-    # some other stuff
-    # some blah blah
-    # some blah blah
-    # some balh balh
-    # some blah blah
-    # some blah balah
-    # trim trailing
-    # some
-    # some
-    # some
+    # Load cluster definitions
+    # Verify connectivity to clusters
+    # parse incomming state request file
+    # add any new projects
+    # update any projects
+    # watch for new incomming state changes
 
 
 if __name__ == '__main__':
