@@ -1,19 +1,21 @@
-# py-example
+# nifi-cluster-coordinator
 
-This repo is a modified version of code project created by the `generator-py` for Yeoman [https://github.com/kaelzhang/generator-py](https://github.com/kaelzhang/generator-py).
+This is a work in progress project which can be used to coordinate deploying the same Apache NiFi process group version to multiple clusters.
 
-To get started it is first recommended to create a python virtual environment.
+This is useful for people who need to maintain the same version of a flow on separate clusters for CI/CD and multiple data center purposes.
+
+## Getting Started
+
+The following packages need to be available on your system
+
+- `libxml2-dev`
+- `libxslt-dev`
+
+Create a python virtual environment.
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Then run `make install`.
-
-In Visual Studio Code unit tests should be auto discovered as well as linting and intellisense.
-
-## TODO
-
-- Fix `Dockerfile`
-- Fix `docs`
+Run `make dev-setup`.

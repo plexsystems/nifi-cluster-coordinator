@@ -19,7 +19,7 @@ lint:
 fix:
 	@autopep8 --aggressive --in-place -r $(project_folder) $(test_folder)
 
-install:
+dev-setup:
 	@pip3 install -U -r requirements.txt
 
 build: lint clean
