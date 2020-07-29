@@ -1,6 +1,0 @@
-clusters:
-  - name: foo-cluster
-    cluster_host_name: 'https://foo-cluster/nifi-api'
-    cluster_ssl_cert_file: '/foo/foo-user-cert.pem'
-    cluster_ssl_ca_cert: '/foo/foo-root-ca-cert.pem'
-    cluster_ssl_key_file: '/foo/foo-root-ca-key.pem'
