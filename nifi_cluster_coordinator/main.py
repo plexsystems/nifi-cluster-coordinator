@@ -1,7 +1,7 @@
 import logging
 import coloredlogs
 import argparse
-import nipyapi
+import requests
 from configuration import config_loader
 
 
@@ -20,20 +20,21 @@ def main(args):
     # update any projects
     # watch for new incomming state changes
 
-    configuration = config_loader.load(args.configfile)
-    logging.info(f"Configuration {configuration}")
+    configuration = config_loader.load_from_file(args.configfile)
 
-    for cluster in configuration['clusters']:
-        logger.info(f"Attempting to connect to {cluster['name']}")
-        nipyapi.config.nifi_config.host = cluster['host_name']
-        nipyapi.config.nifi_config.cert_file = cluster['ssl_cert_file']
-        nipyapi.config.nifi_config.ssl_ca_cert = cluster['ssl_ca_cert']
-        nipyapi.config.nifi_config.key_file = cluster['ssl_key_file']
-        # nipyapi.config.nifi_config.verify_ssl = False
-        # nipyapi.config.nifi_config.debug = True
+    for cluster in configuration.clusters:
+        logger.info(f"Attempting to connect to {cluster.name}")
+        if cluster.security.use_certificate:
+            response = requests.get(
+                cluster.host_name + '/process-groups/root',
+                cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
+                verify=cluster.security.certificate_config.ssl_ca_cert)
+        else:
+            response = requests.get(cluster.host_name + '/process-groups/root')
 
-        root_id = nipyapi.canvas.get_root_pg_id()
-        logger.info(f"Found root process group with id {root_id}")
+        logger.debug(response.json())
+        root_pg = response.json()
+        logger.info(f'Found process group id: {root_pg["id"]}')
 
 
 if __name__ == '__main__':
