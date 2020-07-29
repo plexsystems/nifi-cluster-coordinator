@@ -23,3 +23,5 @@ Run `make dev-setup`.
 ## Configuration
 
 Create a copy of the `nifi-cluster-coordinator.example.yaml` and name it `nifi-cluster-coordinator.yaml` and update it with your cluster configurations.
+
+Copyright (c) 2020 Plex Systems https://www.plex.com
