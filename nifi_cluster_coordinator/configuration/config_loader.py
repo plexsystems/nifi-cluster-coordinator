@@ -1,5 +1,6 @@
 import yaml
 import logging
+import json
 from typing import List
 
 
@@ -33,16 +34,54 @@ class Cluster:
         self.security = Security(security)
 
 
+class Registry:
+    uri: str
+    name: str
+    description: str
+
+    def __init__(self, name, uri, description):
+        self.name = name
+        self.uri = uri
+        self.description = description
+
+    # def toJSON(self):
+    #    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=2)
+
+    def default(self, o):
+        try:
+            iterable = iter(o)
+        except TypeError:
+            pass
+        else:
+            return list(iterable)
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, o)
+
+
 class Configuration:
     clusters: List[Cluster] = []
+    registries: List[Registry] = []
 
-    def __init__(self, clusters: dict):
+    def __init__(self,
+                 clusters: dict,
+                 registries: dict):
         for c in clusters:
             cluster = Cluster(name=c['name'], host_name=c['host_name'], security=c['security'])
             self.clusters.append(cluster)
 
+        for r in registries:
+            registry = Registry(name=r['name'], uri=r['host_name'], description=r['description'])
+            self.registries.append(registry)
+
 
 def load_from_file(config_file_location: str) -> Configuration:
+    """Return a configuration based on a file location.
+
+    :param config_file_location:
+        String of file location to be read.
+    :returns:
+        Configuration object.
+    """
     logger = logging.getLogger(__name__)
     logger.info(f"Attempting to load config file from {config_file_location}")
     stream = open(config_file_location, 'r')
@@ -52,5 +91,10 @@ def load_from_file(config_file_location: str) -> Configuration:
 
 
 def _build_configuration(config_definition) -> Configuration:
-    config = Configuration(config_definition['clusters'])
-    return config
+    try:
+        config = Configuration(
+            config_definition['clusters'],
+            config_definition['registries'])
+        return config
+    except Exception as e:
+        logging.critical(f"Error parsing configuration file: {e}")

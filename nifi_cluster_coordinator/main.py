@@ -2,7 +2,13 @@ import logging
 import coloredlogs
 import argparse
 import requests
+import json
 from configuration import config_loader
+
+
+revision_0 = {
+    "version": 0
+}
 
 
 def main(args):
@@ -14,7 +20,8 @@ def main(args):
     # Load State
     # If no state present, create a new empty state
     # Load cluster definitions
-    # Verify connectivity to clusters
+        # Verify connectivity to clusters
+        # Verify registry entries are created
     # parse incomming state request file
     # add any new projects
     # update any projects
@@ -24,17 +31,58 @@ def main(args):
 
     for cluster in configuration.clusters:
         logger.info(f"Attempting to connect to {cluster.name}")
-        if cluster.security.use_certificate:
-            response = requests.get(
-                cluster.host_name + '/process-groups/root',
-                cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
-                verify=cluster.security.certificate_config.ssl_ca_cert)
-        else:
-            response = requests.get(cluster.host_name + '/process-groups/root')
+        try:
+            if cluster.security.use_certificate:
+                response = requests.get(
+                    cluster.host_name + '/process-groups/root',
+                    cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
+                    verify=cluster.security.certificate_config.ssl_ca_cert)
+                cluster.is_reachable = True
+            else:
+                response = requests.get(cluster.host_name + '/process-groups/root')
+                cluster.is_reachable = True
+        except requests.exceptions.RequestException as exception:
+            logger.info(f"Unable to reach {cluster.name}, will try again later.")
+            logger.warning(exception)
+            cluster.is_reachable = False
 
-        logger.debug(response.json())
-        root_pg = response.json()
-        logger.info(f'Found process group id: {root_pg["id"]}')
+        if cluster.is_reachable:
+            logger.debug(response.json())
+            root_pg = response.json()
+            logger.info(f'Found process group id: {root_pg["id"]}')
+
+    for cluster in list(filter(lambda c: c.is_reachable, configuration.clusters)):
+        logger.info("Setting registry clients.")
+        logger.debug(f"Setting registry clients for: {cluster.name}")
+
+        for registry in configuration.registries:
+            # TODO: Need to check for registry existing before trying to create it
+            data = {
+                "revision": revision_0,
+                "component": vars(registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
+            }
+            logger.debug(json.dumps(data))
+
+            try:
+                if cluster.security.use_certificate:
+                    response = requests.post(
+                        cluster.host_name + '/controller/registry-clients',
+                        cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
+                        verify=cluster.security.certificate_config.ssl_ca_cert,
+                        json=data)
+                    cluster.is_reachable = True
+                else:
+                    response = requests.post(cluster.host_name + '/controller/registry-clients', json=json.dumps(data))
+                    cluster.is_reachable = True
+            except requests.exceptions.RequestException as exception:
+                logger.info(f"Unable to reach {cluster.name}, will try again later.")
+                logger.warning(exception)
+                cluster.is_reachable = False
+
+            logger.debug(response.text)
+            registry.id = response.json()['id']
+            logger.info(f"Registry {registry.name} created with id {registry.id}")
+
 
 
 if __name__ == '__main__':
@@ -47,7 +95,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--configfile',
         help='Set the config file location.',
-        required=False)
+        required=True)
     args = parser.parse_args()
 
     coloredlogs.install(
