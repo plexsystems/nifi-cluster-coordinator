@@ -11,3 +11,25 @@ clusters:
     host_name: 'http://foo-2-cluster/nifi-api'
     security:
       use_certificate: false
+registries:
+  - name: foo-registry
+    host_name: 'https://foo-registry/nifi-registry'
+    description: 'This is a local registry'
+projects:
+  - name: foo-project
+    registry: foo-registry
+    bucketId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    flowId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    clusters:
+      - cluster_name: local-k8-cluster
+        environments:
+          - name: integration
+            isVersioned: true
+            version: 3
+          - name: sandbox
+            isVersioned: false
+      - cluster_name: foo-2-cluster
+        environments:
+          - name: production
+            isVersioned: true
+            version: 2

@@ -1,7 +1,6 @@
 import yaml
 import logging
-import json
-from typing import List
+import pickle
 
 
 class CertificateConfig:
@@ -13,8 +12,6 @@ class CertificateConfig:
 
 
 class Security:
-    use_certificate: bool
-    certificate_config: CertificateConfig
 
     def __init__(self, security: dict):
         self.use_certificate = security['use_certificate']
@@ -23,55 +20,32 @@ class Security:
             self.certificate_config = CertificateConfig(security['certificate_config'])
 
 
-class Cluster:
-    name: str
-    host_name: str
-    security: Security
-
-    def __init__(self, name: str, host_name: str, security: dict):
-        self.name = name
-        self.host_name = host_name
-        self.security = Security(security)
-
-
 class Registry:
-    uri: str
-    name: str
-    description: str
 
     def __init__(self, name, uri, description):
         self.name = name
         self.uri = uri
         self.description = description
 
-    # def toJSON(self):
-    #    return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=2)
 
-    def default(self, o):
-        try:
-            iterable = iter(o)
-        except TypeError:
-            pass
-        else:
-            return list(iterable)
-        # Let the base class default method raise the TypeError
-        return json.JSONEncoder.default(self, o)
+class Cluster:
+    def __init__(self, name: str, host_name: str, security: dict):
+        self.name = name
+        self.host_name = host_name
+        self.security = Security(security)
+        self.registries = []
 
 
 class Configuration:
-    clusters: List[Cluster] = []
-    registries: List[Registry] = []
 
-    def __init__(self,
-                 clusters: dict,
-                 registries: dict):
-        for c in clusters:
-            cluster = Cluster(name=c['name'], host_name=c['host_name'], security=c['security'])
-            self.clusters.append(cluster)
+    def __init__(self, clusters: dict, registries: dict, projects: dict):
+        self.clusters = [Cluster(name=c['name'], host_name=c['host_name'], security=c['security']) for c in clusters]
+        self.registries = [Registry(name=r['name'], uri=r['host_name'], description=r['description']) for r in registries]
+        self.projects = projects
 
-        for r in registries:
-            registry = Registry(name=r['name'], uri=r['host_name'], description=r['description'])
-            self.registries.append(registry)
+    def save_to_file(self, save_file_location: str):
+        with open(save_file_location, 'wb') as output:
+            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
 
 
 def load_from_file(config_file_location: str) -> Configuration:
@@ -94,7 +68,8 @@ def _build_configuration(config_definition) -> Configuration:
     try:
         config = Configuration(
             config_definition['clusters'],
-            config_definition['registries'])
+            config_definition['registries'],
+            config_definition['projects'])
         return config
     except Exception as e:
         logging.critical(f"Error parsing configuration file: {e}")

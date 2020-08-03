@@ -77,3 +77,4 @@ tmp/
 
 # Project Specific
 conf/nifi-cluster-coordinator.yaml
+*.pkl

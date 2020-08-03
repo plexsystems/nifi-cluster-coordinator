@@ -2,45 +2,31 @@ import logging
 import coloredlogs
 import argparse
 import requests
-import json
 from configuration import config_loader
-
+import copy
 
 revision_0 = {
     "version": 0
 }
 
 
-def main(args):
+def get_connection_details(cluster, endpoint: str):
+    connection_details = {
+        "url": cluster.host_name + endpoint,
+        "cert": (cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file) if cluster.security.use_certificate else None,
+        "verify": cluster.security.certificate_config.ssl_ca_cert if cluster.security.use_certificate else None
+    }
+    return connection_details
+
+
+def _test_cluster_connectivity(configuration):
+    """Determin if each configured cluster is reachable."""
     logger = logging.getLogger(__name__)
-
-    if args.configfile is None:
-        raise ValueError("No configuration file specified")
-
-    # Load State
-    # If no state present, create a new empty state
-    # Load cluster definitions
-        # Verify connectivity to clusters
-        # Verify registry entries are created
-    # parse incomming state request file
-    # add any new projects
-    # update any projects
-    # watch for new incomming state changes
-
-    configuration = config_loader.load_from_file(args.configfile)
-
     for cluster in configuration.clusters:
         logger.info(f"Attempting to connect to {cluster.name}")
         try:
-            if cluster.security.use_certificate:
-                response = requests.get(
-                    cluster.host_name + '/process-groups/root',
-                    cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
-                    verify=cluster.security.certificate_config.ssl_ca_cert)
-                cluster.is_reachable = True
-            else:
-                response = requests.get(cluster.host_name + '/process-groups/root')
-                cluster.is_reachable = True
+            response = requests.get(**get_connection_details(cluster, '/process-groups/root'))
+            cluster.is_reachable = True
         except requests.exceptions.RequestException as exception:
             logger.info(f"Unable to reach {cluster.name}, will try again later.")
             logger.warning(exception)
@@ -51,38 +37,85 @@ def main(args):
             root_pg = response.json()
             logger.info(f'Found process group id: {root_pg["id"]}')
 
+
+def main(args):
+    logger = logging.getLogger(__name__)
+
+    if args.configfile is None:
+        raise ValueError("No configuration file specified")
+
+    # add any new projects
+    # update any projects
+    # watch for new incomming state changes
+
+    configuration = config_loader.load_from_file(args.configfile)
+    _test_cluster_connectivity(configuration)
+
+    # For each cluster in our configuration
+    # Get the list of currently configured registry clients
+    # For each registry in the confgiuration file
+    # See if that registry is currently configured
+    # Verify if the URI is the same
+    # If the URI does not match update the URI
+    # If the registry is not found on the configuration list, add it
+    # TODO: Garbage collect any configured registries which are not part of the master configuration
     for cluster in list(filter(lambda c: c.is_reachable, configuration.clusters)):
-        logger.info("Setting registry clients.")
-        logger.debug(f"Setting registry clients for: {cluster.name}")
+        logger.info(f"Setting registry clients for: {cluster.name}")
+
+        cluster_registries = requests.get(**get_connection_details(cluster, '/controller/registry-clients')).json()
 
         for registry in configuration.registries:
-            # TODO: Need to check for registry existing before trying to create it
-            data = {
-                "revision": revision_0,
-                "component": vars(registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
-            }
-            logger.debug(json.dumps(data))
+            for configured_registry in cluster_registries['registries']:
+                if registry.name == configured_registry['component']['name']:
+                    if registry.uri != configured_registry['component']['uri']:
+                        logger.warning(f"Registry URI missmatch for {registry.name} and {cluster.name}, updating")
+                        configured_registry['component']['uri'] = registry.uri
+                        try:
+                            response = requests.put(
+                                **get_connection_details(cluster, f'/controller/registry-clients/{configured_registry["id"]}'),
+                                json=configured_registry
+                            )
+                            logger.debug(response.text)
+                        except requests.exceptions.RequestException as exception:
+                            logger.info(f"Unable to reach {cluster.name}, will try again later.")
+                            logger.warning(exception)
+                            cluster.is_reachable = False
 
-            try:
-                if cluster.security.use_certificate:
+                    # registry.id = configured_registry['component']['id']
+                    r = copy.copy(registry)
+                    r.id = configured_registry['component']['id']
+                    cluster.registries.append(r)
+                    logger.debug(f'Found configured {r.name} configured for {cluster.name}')
+
+        for registry in configuration.registries:
+            if next((x for x in cluster.registries if x.name == registry.name), None) is None:
+                logger.info(f'Adding {registry.name} to {cluster.name}')
+                data = {
+                    "revision": revision_0,
+                    "component": vars(registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
+                }
+
+                try:
                     response = requests.post(
-                        cluster.host_name + '/controller/registry-clients',
-                        cert=(cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file),
-                        verify=cluster.security.certificate_config.ssl_ca_cert,
+                        **get_connection_details(cluster, '/controller/registry-clients'),
                         json=data)
-                    cluster.is_reachable = True
+                    logger.debug(response.text)
+                except requests.exceptions.RequestException as exception:
+                    logger.info(f"Unable to reach {cluster.name}, will try again later.")
+                    logger.warning(exception)
+                    cluster.is_reachable = False
+
+                if response.status_code == 201:
+                    r = copy.copy(registry)
+                    r.id = response.json()['id']
+                    cluster.registries.append(r)
+                    logger.info(f"Cluster {cluster.name} added registry {r.name} with id {r.id}")
                 else:
-                    response = requests.post(cluster.host_name + '/controller/registry-clients', json=json.dumps(data))
-                    cluster.is_reachable = True
-            except requests.exceptions.RequestException as exception:
-                logger.info(f"Unable to reach {cluster.name}, will try again later.")
-                logger.warning(exception)
-                cluster.is_reachable = False
+                    # NiFi clusters which are not configured with keystore/truststores cannot be configured
+                    # to talk to https nifi registries.  This will catch
+                    logger.warning(response.text)
 
-            logger.debug(response.text)
-            registry.id = response.json()['id']
-            logger.info(f"Registry {registry.name} created with id {registry.id}")
-
+    configuration.save_to_file(args.statefile)
 
 
 if __name__ == '__main__':
@@ -96,6 +129,11 @@ if __name__ == '__main__':
         '--configfile',
         help='Set the config file location.',
         required=True)
+    parser.add_argument(
+        '--statefile',
+        help='Set the file name for storing state information.  (.pkl format)',
+        required=True
+    )
     args = parser.parse_args()
 
     coloredlogs.install(
@@ -109,7 +147,7 @@ if __name__ == '__main__':
         main(args)
     except Exception as error:
         logger.critical(error)
-        logger.warning("Unexpected error, shutting down.")
+        logger.critical("Unexpected error, shutting down.")
         exit(1)
 
     logger.debug("Stopping program")
