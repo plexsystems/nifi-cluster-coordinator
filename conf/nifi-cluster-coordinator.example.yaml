@@ -3,10 +3,10 @@ clusters:
     host_name: 'https://foo-cluster/nifi-api'
     security:
       use_certificate: true
-        certificate_config:
-          ssl_cert_file: '/foo/foo-user-cert.pem'
-          ssl_ca_cert: '/foo/foo-root-ca-cert.pem'
-          ssl_key_file: '/foo/foo-root-ca-key.pem'
+      certificate_config:
+        ssl_cert_file: '/foo/foo-user-cert.pem'
+        ssl_ca_cert: '/foo/foo-root-ca-cert.pem'
+        ssl_key_file: '/foo/foo-root-ca-key.pem'
   - name: foo-2-cluser
     host_name: 'http://foo-2-cluster/nifi-api'
     security:
