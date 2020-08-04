@@ -80,7 +80,6 @@ def _update_registry(name, configuration_registry, configured_registry, cluster)
     """Update the existing registry in the cluster if it has a different URI."""
     logger = logging.getLogger(__name__)
     if configuration_registry.uri != configured_registry['component']['uri']:
-        # Update the registry.
         logger.warning(f'Registry URI mismatch for {name} and {cluster.name}, updating.')
         configured_registry['component']['uri'] = configuration_registry.uri
         try:
