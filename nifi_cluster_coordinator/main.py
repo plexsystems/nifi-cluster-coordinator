@@ -20,7 +20,7 @@ def get_connection_details(cluster, endpoint: str):
 
 
 def _test_cluster_connectivity(configuration):
-    """Determin if each configured cluster is reachable."""
+    """Determine if each configured cluster is reachable."""
     logger = logging.getLogger(__name__)
     for cluster in configuration.clusters:
         logger.info(f"Attempting to connect to {cluster.name}")
@@ -36,6 +36,68 @@ def _test_cluster_connectivity(configuration):
             logger.debug(response.json())
             root_pg = response.json()
             logger.info(f'Found process group id: {root_pg["id"]}')
+
+
+def _registry_munger(configuration_registries, configured_registries):
+    """Generator for iterating through the union of the desired & current registry configurations.
+    Yields a tuple containing the registry name, desired configuration, & current configuration."""
+
+    for k in configuration_registries.keys() | configured_registries.keys():
+        yield (k, configuration_registries.get(k, None), configured_registries.get(k, None))
+
+
+def _create_registry(name, configuration_registry, configured_registry, cluster):
+    """Create the missing registry in the cluster."""
+    logger = logging.getLogger(__name__)
+    logger.info(f'Adding {name} to {cluster.name}')
+    data = {
+        "revision": revision_0,
+        "component": vars(configuration_registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
+    }
+
+    try:
+        response = requests.post(
+            **get_connection_details(cluster, '/controller/registry-clients'),
+            json=data)
+        logger.debug(response.text)
+    except requests.exceptions.RequestException as exception:
+        logger.info(f"Unable to reach {cluster.name}, will try again later.")
+        logger.warning(exception)
+        cluster.is_reachable = False
+
+    if response.status_code == 201:
+        r = copy.copy(configuration_registry)
+        r.id = response.json()['id']
+        cluster.registries.append(r)
+        logger.info(f"Cluster {cluster.name} added registry {r.name} with id {r.id}")
+    else:
+        # NiFi clusters which are not configured with keystore/truststores cannot be configured
+        # to talk to https nifi registries.  This will catch
+        logger.warning(response.text)
+
+
+def _update_registry(name, configuration_registry, configured_registry, cluster):
+    """Update the existing registry in the cluster if it has a different URI."""
+    logger = logging.getLogger(__name__)
+    if configuration_registry.uri != configured_registry['component']['uri']:
+        logger.warning(f'Registry URI mismatch for {name} and {cluster.name}, updating.')
+        configured_registry['component']['uri'] = configuration_registry.uri
+        try:
+            response = requests.put(
+                **get_connection_details(cluster, f'/controller/registry-clients/{configured_registry["id"]}'),
+                json=configured_registry
+            )
+            logger.debug(response.text)
+        except requests.exceptions.RequestException as exception:
+            logger.info(f"Unable to reach {cluster.name}, will try again later.")
+            logger.warning(exception)
+            cluster.is_reachable = False
+
+    # BUG: This will append the desired registry to the cluster.registries list even if the update failed.
+    r = copy.copy(configuration_registry)
+    r.id = configured_registry['component']['id']
+    cluster.registries.append(r)
+    logger.debug(f'Found configured {r.name} configured for {cluster.name}')
 
 
 def main(args):
@@ -64,56 +126,20 @@ def main(args):
 
         cluster_registries = requests.get(**get_connection_details(cluster, '/controller/registry-clients')).json()
 
-        for registry in configuration.registries:
-            for configured_registry in cluster_registries['registries']:
-                if registry.name == configured_registry['component']['name']:
-                    if registry.uri != configured_registry['component']['uri']:
-                        logger.warning(f"Registry URI missmatch for {registry.name} and {cluster.name}, updating")
-                        configured_registry['component']['uri'] = registry.uri
-                        try:
-                            response = requests.put(
-                                **get_connection_details(cluster, f'/controller/registry-clients/{configured_registry["id"]}'),
-                                json=configured_registry
-                            )
-                            logger.debug(response.text)
-                        except requests.exceptions.RequestException as exception:
-                            logger.info(f"Unable to reach {cluster.name}, will try again later.")
-                            logger.warning(exception)
-                            cluster.is_reachable = False
+        # Build dictionaries for the desired registry configuration & the current registry configuration.
+        # The dictionaries are indexed by name to support efficient lookups & comparisons.
+        configuration_registries = {registry.name: registry for registry in configuration.registries}
+        configured_registries = {registry['component']['name']: registry for registry in cluster_registries['registries']}
 
-                    # registry.id = configured_registry['component']['id']
-                    r = copy.copy(registry)
-                    r.id = configured_registry['component']['id']
-                    cluster.registries.append(r)
-                    logger.debug(f'Found configured {r.name} configured for {cluster.name}')
-
-        for registry in configuration.registries:
-            if next((x for x in cluster.registries if x.name == registry.name), None) is None:
-                logger.info(f'Adding {registry.name} to {cluster.name}')
-                data = {
-                    "revision": revision_0,
-                    "component": vars(registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
-                }
-
-                try:
-                    response = requests.post(
-                        **get_connection_details(cluster, '/controller/registry-clients'),
-                        json=data)
-                    logger.debug(response.text)
-                except requests.exceptions.RequestException as exception:
-                    logger.info(f"Unable to reach {cluster.name}, will try again later.")
-                    logger.warning(exception)
-                    cluster.is_reachable = False
-
-                if response.status_code == 201:
-                    r = copy.copy(registry)
-                    r.id = response.json()['id']
-                    cluster.registries.append(r)
-                    logger.info(f"Cluster {cluster.name} added registry {r.name} with id {r.id}")
-                else:
-                    # NiFi clusters which are not configured with keystore/truststores cannot be configured
-                    # to talk to https nifi registries.  This will catch
-                    logger.warning(response.text)
+        # loop through registries & set appropriate values.
+        for name, configuration_registry, configured_registry in _registry_munger(configuration_registries, configured_registries):
+            if configured_registry is None:
+                _create_registry(name, configuration_registry, configured_registry, cluster)
+            elif configuration_registry is None:
+                # TODO: Delete the registry.
+                pass
+            else:
+                _update_registry(name, configuration_registry, configured_registry, cluster)
 
     configuration.save_to_file(args.statefile)
 
