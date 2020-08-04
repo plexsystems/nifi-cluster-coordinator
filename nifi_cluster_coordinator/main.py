@@ -4,6 +4,7 @@ import argparse
 import requests
 from configuration import config_loader
 import copy
+import config_file_watcher
 
 revision_0 = {
     "version": 0
@@ -116,6 +117,7 @@ def main(args):
                     logger.warning(response.text)
 
     configuration.save_to_file(args.statefile)
+    config_file_watcher.watch_configuration(args.configfile)
 
 
 if __name__ == '__main__':
