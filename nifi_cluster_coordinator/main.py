@@ -38,6 +38,13 @@ def _test_cluster_connectivity(configuration):
             logger.info(f'Found process group id: {root_pg["id"]}')
 
 
+def _registry_munger(configuration_registries, configured_registries):
+    # Generator for iterating through the union of the desired & current registry configurations.
+    # Yields a tuple containing the registry name, desired configuration, & current configuration.
+    for k in configuration_registries.keys() | configured_registries.keys():
+        yield (k, configuration_registries.get(k, None), configured_registries.get(k, None))
+
+
 def main(args):
     logger = logging.getLogger(__name__)
 
@@ -63,6 +70,23 @@ def main(args):
         logger.info(f"Setting registry clients for: {cluster.name}")
 
         cluster_registries = requests.get(**get_connection_details(cluster, '/controller/registry-clients')).json()
+
+        # Build dictionaries for the desired registry configuration & the current registry configuration.
+        # The dictionaries are indexed by name to support efficient lookups & comparisons.
+        configuration_registries = {registry.name: registry for registry in configuration.registries}
+        configured_registries = {registry['component']['name']: registry for registry in cluster_registries['registries']}
+
+        # loop through registries & set appropriate values.
+        for name, configuration_registry, configured_registry in _registry_munger(configuration_registries, configured_registries):
+            if configured_registry is None:
+                pass
+                # TODO: create the registry
+            elif configuration_registry is None:
+                pass
+                # TODO: delete the registry
+            elif configuration_registry.uri != configured_registry['component']['uri']:
+                pass
+                # TODO: update the registry
 
         for registry in configuration.registries:
             for configured_registry in cluster_registries['registries']:
