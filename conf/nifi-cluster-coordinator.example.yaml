@@ -21,7 +21,7 @@ projects:
     bucketId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
     flowId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
     clusters:
-      - cluster_name: local-k8-cluster
+      - cluster_name: foo-cluster
         environments:
           - name: integration
             isVersioned: true

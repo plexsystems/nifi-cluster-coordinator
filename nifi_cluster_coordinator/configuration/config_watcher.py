@@ -1,5 +1,5 @@
 import logging
-from watchdog.observers.polling import PollingObserver
+from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import time
 from os import path
@@ -43,7 +43,7 @@ def watch_configuration(config_file: str):
     event_handler.on_deleted = _on_deleted
     event_handler.on_modified = _on_modified
     event_handler.on_moved = _on_moved
-    observer = PollingObserver(0.1)
+    observer = Observer()
     observer.schedule(event_handler, directory, recursive=False)
     observer.start()
     logger.info(f"Starting to watch {config_file}")

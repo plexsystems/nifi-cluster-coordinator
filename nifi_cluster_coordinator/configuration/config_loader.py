@@ -1,39 +1,8 @@
 import yaml
 import logging
 import pickle
-
-
-class CertificateConfig:
-
-    def __init__(self, certificate_config: dict):
-        self.ssl_cert_file = certificate_config['ssl_cert_file']
-        self.ssl_ca_cert = certificate_config['ssl_ca_cert']
-        self.ssl_key_file = certificate_config['ssl_key_file']
-
-
-class Security:
-
-    def __init__(self, security: dict):
-        self.use_certificate = security['use_certificate']
-
-        if self.use_certificate:
-            self.certificate_config = CertificateConfig(security['certificate_config'])
-
-
-class Registry:
-
-    def __init__(self, name, uri, description):
-        self.name = name
-        self.uri = uri
-        self.description = description
-
-
-class Cluster:
-    def __init__(self, name: str, host_name: str, security: dict):
-        self.name = name
-        self.host_name = host_name
-        self.security = Security(security)
-        self.registries = []
+from .cluster import Cluster
+from .registry import Registry
 
 
 class Configuration:

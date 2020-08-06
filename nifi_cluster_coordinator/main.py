@@ -1,104 +1,7 @@
 import logging
 import coloredlogs
 import argparse
-import requests
-from configuration import config_loader
-import copy
-import config_file_watcher
-
-revision_0 = {
-    "version": 0
-}
-
-
-def get_connection_details(cluster, endpoint: str):
-    connection_details = {
-        "url": cluster.host_name + endpoint,
-        "cert": (cluster.security.certificate_config.ssl_cert_file, cluster.security.certificate_config.ssl_key_file) if cluster.security.use_certificate else None,
-        "verify": cluster.security.certificate_config.ssl_ca_cert if cluster.security.use_certificate else None
-    }
-    return connection_details
-
-
-def _test_cluster_connectivity(configuration):
-    """Determine if each configured cluster is reachable."""
-    logger = logging.getLogger(__name__)
-    for cluster in configuration.clusters:
-        logger.info(f"Attempting to connect to {cluster.name}")
-        try:
-            response = requests.get(**get_connection_details(cluster, '/process-groups/root'))
-            cluster.is_reachable = True
-        except requests.exceptions.RequestException as exception:
-            logger.info(f"Unable to reach {cluster.name}, will try again later.")
-            logger.warning(exception)
-            cluster.is_reachable = False
-
-        if cluster.is_reachable:
-            logger.debug(response.json())
-            root_pg = response.json()
-            logger.info(f'Found process group id: {root_pg["id"]}')
-
-
-def _registry_munger(configuration_registries, configured_registries):
-    """Generator for iterating through the union of the desired & current registry configurations.
-    Yields a tuple containing the registry name, desired configuration, & current configuration."""
-
-    for k in configuration_registries.keys() | configured_registries.keys():
-        yield (k, configuration_registries.get(k, None), configured_registries.get(k, None))
-
-
-def _create_registry(name, configuration_registry, configured_registry, cluster):
-    """Create the missing registry in the cluster."""
-    logger = logging.getLogger(__name__)
-    logger.info(f'Adding {name} to {cluster.name}')
-    data = {
-        "revision": revision_0,
-        "component": vars(configuration_registry)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
-    }
-
-    try:
-        response = requests.post(
-            **get_connection_details(cluster, '/controller/registry-clients'),
-            json=data)
-        logger.debug(response.text)
-    except requests.exceptions.RequestException as exception:
-        logger.info(f"Unable to reach {cluster.name}, will try again later.")
-        logger.warning(exception)
-        cluster.is_reachable = False
-
-    if response.status_code == 201:
-        r = copy.copy(configuration_registry)
-        r.id = response.json()['id']
-        cluster.registries.append(r)
-        logger.info(f"Cluster {cluster.name} added registry {r.name} with id {r.id}")
-    else:
-        # NiFi clusters which are not configured with keystore/truststores cannot be configured
-        # to talk to https nifi registries.  This will catch
-        logger.warning(response.text)
-
-
-def _update_registry(name, configuration_registry, configured_registry, cluster):
-    """Update the existing registry in the cluster if it has a different URI."""
-    logger = logging.getLogger(__name__)
-    if configuration_registry.uri != configured_registry['component']['uri']:
-        logger.warning(f'Registry URI mismatch for {name} and {cluster.name}, updating.')
-        configured_registry['component']['uri'] = configuration_registry.uri
-        try:
-            response = requests.put(
-                **get_connection_details(cluster, f'/controller/registry-clients/{configured_registry["id"]}'),
-                json=configured_registry
-            )
-            logger.debug(response.text)
-        except requests.exceptions.RequestException as exception:
-            logger.info(f"Unable to reach {cluster.name}, will try again later.")
-            logger.warning(exception)
-            cluster.is_reachable = False
-
-    # BUG: This will append the desired registry to the cluster.registries list even if the update failed.
-    r = copy.copy(configuration_registry)
-    r.id = configured_registry['component']['id']
-    cluster.registries.append(r)
-    logger.debug(f'Found configured {r.name} configured for {cluster.name}')
+from configuration import config_loader, config_watcher
 
 
 def main(args):
@@ -107,43 +10,21 @@ def main(args):
     if args.configfile is None:
         raise ValueError("No configuration file specified")
 
-    # add any new projects
-    # update any projects
-    # watch for new incomming state changes
-
     configuration = config_loader.load_from_file(args.configfile)
-    _test_cluster_connectivity(configuration)
 
-    # For each cluster in our configuration
-    # Get the list of currently configured registry clients
-    # For each registry in the confgiuration file
-    # See if that registry is currently configured
-    # Verify if the URI is the same
-    # If the URI does not match update the URI
-    # If the registry is not found on the configuration list, add it
-    # TODO: Garbage collect any configured registries which are not part of the master configuration
+    for cluster in configuration.clusters:
+        cluster.test_connectivity()
+
     for cluster in list(filter(lambda c: c.is_reachable, configuration.clusters)):
         logger.info(f"Setting registry clients for: {cluster.name}")
+        cluster.set_registry_entries(configuration.registries)
 
-        cluster_registries = requests.get(**get_connection_details(cluster, '/controller/registry-clients')).json()
+    # TODO: Figure out state management, commenting out for now
+    # configuration.save_to_file(args.statefile)
 
-        # Build dictionaries for the desired registry configuration & the current registry configuration.
-        # The dictionaries are indexed by name to support efficient lookups & comparisons.
-        configuration_registries = {registry.name: registry for registry in configuration.registries}
-        configured_registries = {registry['component']['name']: registry for registry in cluster_registries['registries']}
-
-        # loop through registries & set appropriate values.
-        for name, configuration_registry, configured_registry in _registry_munger(configuration_registries, configured_registries):
-            if configured_registry is None:
-                _create_registry(name, configuration_registry, configured_registry, cluster)
-            elif configuration_registry is None:
-                # TODO: Delete the registry.
-                pass
-            else:
-                _update_registry(name, configuration_registry, configured_registry, cluster)
-
-    configuration.save_to_file(args.statefile)
-    config_file_watcher.watch_configuration(args.configfile)
+    if args.watch:
+        config_watcher.watch_configuration(args.configfile)
+        # TODO: Implement actual reprocessing of configuration on file change
 
 
 if __name__ == '__main__':
@@ -157,11 +38,14 @@ if __name__ == '__main__':
         '--configfile',
         help='Set the config file location.',
         required=True)
+    # parser.add_argument(
+    #     '--statefile',
+    #     help='Set the file name for storing state information.  (.pkl format)',
+    #     required=False)
     parser.add_argument(
-        '--statefile',
-        help='Set the file name for storing state information.  (.pkl format)',
-        required=True
-    )
+        '--watch',
+        help='Leave application running and watch the configuration file for updates.',
+        action='store_true')
     args = parser.parse_args()
 
     coloredlogs.install(
