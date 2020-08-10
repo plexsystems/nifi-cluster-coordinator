@@ -10,14 +10,14 @@ default_log_level = DEBUG
 state_file = conf/nifi-cluster-state.pkl
 
 run: fix
-	@python3 $(project_folder)/$(entry_file) --loglevel $(default_log_level) --configfile $(config_file) --statefile $(state_file)
+	@python3 $(project_folder)/$(entry_file) --loglevel $(default_log_level) --configfile $(config_file)
 
 test:
 	@pytest -s -v $(test_files) --doctest-modules --cov $(project_folder) --cov-config=.coveragerc --cov-report term-missing
 
 # Ignoring W292 on linting because autopep8 can't seem to fix it
 lint:
-	@flake8 --statistics --extend-ignore=W292 $(project_folder) $(test_folder)
+	@flake8 --statistics --extend-ignore=W292,W503 $(project_folder) $(test_folder)
 
 fix:
 	@autopep8 --aggressive --in-place -r $(project_folder) $(test_folder)
