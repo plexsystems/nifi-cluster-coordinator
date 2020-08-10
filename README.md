@@ -32,7 +32,7 @@ The `clusters` section of the configuration file describes each Apache NiFi inst
 
 Currently the nifi-cluster-coordinator supports unsecured clusters and clusters secured via certificates.
 
-For secured instances the certificates required to connect to the cluster needs to be accessible by the nifi-cluster-coordinator.
+For secured instances, the certificates required to connect to the cluster need to be accessible by the nifi-cluster-coordinator.
 
 ```yaml
 clusters:
