@@ -4,7 +4,7 @@ import copy
 from .security import Security
 
 revision_0 = {
-    "version": 0
+    'version': 0
 }
 
 # For each cluster in our configuration
@@ -27,25 +27,25 @@ class Cluster:
     def _get_connection_details(self, endpoint: str):
         """Return the connection details for the cluster API calls."""
         connection_details = {
-            "url": self.host_name + endpoint,
-            "cert": (self.security.certificate_config.ssl_cert_file, self.security.certificate_config.ssl_key_file) if self.security.use_certificate else None,
-            "verify": self.security.certificate_config.ssl_ca_cert if self.security.use_certificate else None
+            'url': self.host_name + endpoint,
+            'cert': (self.security.certificate_config.ssl_cert_file, self.security.certificate_config.ssl_key_file) if self.security.use_certificate else None,
+            'verify': self.security.certificate_config.ssl_ca_cert if self.security.use_certificate else None
         }
         return connection_details
 
     def test_connectivity(self):
         """Determine if cluster is reachable."""
         logger = logging.getLogger(__name__)
-        logger.info(f"Connectivity test: {self.name}.")
+        logger.info(f'Connectivity test: {self.name}.')
         try:
             response = requests.get(**self._get_connection_details('/process-groups/root'))
             logger.debug(response.json())
             self.is_reachable = True
-            self.root_process_group_id = response.json()["id"]
-            logger.info(f"found process group id: {self.root_process_group_id}")
+            self.root_process_group_id = response.json()['id']
+            logger.info(f'found process group id: {self.root_process_group_id}')
         except requests.exceptions.RequestException as exception:
             logger.warning(exception)
-            logger.info(f"Unable to reach {self.name}, will try again later.")
+            logger.info(f'Unable to reach {self.name}, will try again later.')
             self.is_reachable = False
 
     def _registry_munger(self, registries_desired_configurations, registries_current_configurations):
@@ -74,7 +74,7 @@ class Cluster:
                 registry.id = current_registry_configuration['component']['id']
                 self.registries.append(registry)
             except requests.exceptions.RequestException as exception:
-                logger.info(f"Unable to reach {self.name}, will try again later.")
+                logger.info(f'Unable to reach {self.name}, will try again later.')
                 logger.warning(exception)
                 self.is_reachable = False
 
@@ -83,8 +83,8 @@ class Cluster:
         logger = logging.getLogger(__name__)
         logger.info(f'Adding {desired_registry_configuration.name} to {self.name}')
         data = {
-            "revision": revision_0,
-            "component": vars(desired_registry_configuration)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
+            'revision': revision_0,
+            'component': vars(desired_registry_configuration)  # HACK: vars(foo) creates a dictonary of values, need to find a better way to do this
         }
 
         try:
@@ -93,7 +93,7 @@ class Cluster:
                 json=data)
             logger.debug(response.text)
         except requests.exceptions.RequestException as exception:
-            logger.info(f"Unable to reach {self.name}, will try again later.")
+            logger.info(f'Unable to reach {self.name}, will try again later.')
             logger.warning(exception)
             self.is_reachable = False
 
@@ -101,7 +101,7 @@ class Cluster:
             r = copy.copy(desired_registry_configuration)
             r.id = response.json()['id']
             self.registries.append(r)
-            logger.info(f"Cluster {self.name} added registry {r.name} with id {r.id}")
+            logger.info(f'Cluster {self.name} added registry {r.name} with id {r.id}')
         else:
             # NiFi clusters which are not configured with keystore/truststores cannot be configured
             # to talk to https nifi registries.  This will catch
@@ -110,7 +110,7 @@ class Cluster:
     def set_registry_entries(self, configured_registries):
         """Set the cluster nifi-registry entries to their desired configuration."""
         logger = logging.getLogger(__name__)
-        logger.info(f"Setting registry clients for: {self.name}")
+        logger.info(f'Setting registry clients for: {self.name}')
 
         cluster_registries = requests.get(**self._get_connection_details('/controller/registry-clients')).json()
 

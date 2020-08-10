@@ -9,6 +9,7 @@ coverage==5.2.1
 cryptography==3.0
 flake8==3.8.3
 flake8-print==3.1.4
+flake8-quotes==3.2.0
 humanfriendly==8.2
 idna==2.10
 mccabe==0.6.1

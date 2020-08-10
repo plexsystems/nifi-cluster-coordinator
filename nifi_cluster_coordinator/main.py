@@ -8,7 +8,7 @@ def main(args):
     logger = logging.getLogger(__name__)
 
     if args.configfile is None:
-        raise ValueError("No configuration file specified")
+        raise ValueError('No configuration file specified')
 
     configuration = config_loader.load_from_file(args.configfile)
 
@@ -16,7 +16,7 @@ def main(args):
         cluster.test_connectivity()
 
     for cluster in list(filter(lambda c: c.is_reachable, configuration.clusters)):
-        logger.info(f"Setting registry clients for: {cluster.name}")
+        logger.info(f'Setting registry clients for: {cluster.name}')
         cluster.set_registry_entries(configuration.registries)
 
     # TODO: Figure out state management, commenting out for now
@@ -51,16 +51,16 @@ if __name__ == '__main__':
     coloredlogs.install(
         level=args.loglevel,
         milliseconds=True,
-        fmt="%(asctime)s %(hostname)s %(name)s %(levelname)s: %(funcName)s[%(lineno)s] %(message)s")
+        fmt='%(asctime)s %(hostname)s %(name)s %(levelname)s: %(funcName)s[%(lineno)s] %(message)s')
     logger = logging.getLogger(__name__)
 
-    logger.debug("Starting program")
+    logger.debug('Starting program')
     try:
         main(args)
     except Exception as error:
         logger.critical(error)
-        logger.critical("Unexpected error, shutting down.")
+        logger.critical('Unexpected error, shutting down.')
         exit(1)
 
-    logger.debug("Stopping program")
+    logger.debug('Stopping program')
     exit(0)

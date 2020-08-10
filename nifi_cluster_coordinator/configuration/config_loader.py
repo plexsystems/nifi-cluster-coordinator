@@ -26,10 +26,10 @@ def load_from_file(config_file_location: str) -> Configuration:
         Configuration object.
     """
     logger = logging.getLogger(__name__)
-    logger.info(f"Attempting to load config file from {config_file_location}")
+    logger.info(f'Attempting to load config file from {config_file_location}')
     stream = open(config_file_location, 'r')
     configuration = _build_configuration(yaml.safe_load(stream))
-    logger.info(f"Loaded configuration for {configuration.clusters.__len__()} clusters.")
+    logger.info(f'Loaded configuration for {configuration.clusters.__len__()} clusters.')
     return configuration
 
 
@@ -41,4 +41,4 @@ def _build_configuration(config_definition) -> Configuration:
             config_definition['projects'])
         return config
     except Exception as e:
-        logging.critical(f"Error parsing configuration file: {e}")
+        logging.critical(f'Error parsing configuration file: {e}')
