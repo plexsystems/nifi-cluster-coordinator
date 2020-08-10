@@ -110,8 +110,8 @@ class Cluster:
     def set_registry_entries(self, configured_registries):
         """Set the cluster nifi-registry entries to their desired configuration."""
         logger = logging.getLogger(__name__)
-        logger.info(f'Setting registry clients for: {self.name}')
 
+        logger.info(f'Collecting currently configure registries for: {self.name}')
         cluster_registries = requests.get(**self._get_connection_details('/controller/registry-clients')).json()
 
         # Build dictionaries for the desired registry configuration & the current registry configuration.
@@ -127,6 +127,5 @@ class Cluster:
                 # TODO: Delete the registry.
                 logger.warn(f'Deleting {configured_registry}')
                 self._delete_registry(configured_registry)
-                pass
             else:
                 self._update_registry(desired_registry_configuration, configured_registry)
