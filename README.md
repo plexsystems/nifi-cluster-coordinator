@@ -52,7 +52,7 @@ clusters:
 
 #### Apache NiFi Registry
 
-The nifi-cluster-coordinator will insure that the same Apache Nifi Registry entries are present on all managed clusters.
+The nifi-cluster-coordinator will ensure that the same Apache Nifi Registry entries are present on all managed clusters.
 
 __Note__: Apache Nifi instances running in unsecured mode cannot accept Apache Nifi Registry URI's configured for https.  The nifi-cluster-coordinator will write a WARNING log when this is encountered.
 
