@@ -18,7 +18,7 @@ This may be set to DEBUG, INFORMATION, WARNING, CRITICAL.  The default level is 
 
 `--configfile /path/to/file.yaml` (required)
 
-The location on disk that nifi-cluster-coordinator to read and process.
+The location on disk of the config file that you want nifi-cluster-coordinator to read and process.
 
 `--watch` (optional)
 
