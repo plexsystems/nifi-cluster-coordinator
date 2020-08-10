@@ -1,6 +1,5 @@
 import yaml
 import logging
-import pickle
 from .cluster import Cluster
 from .registry import Registry
 
@@ -11,10 +10,6 @@ class Configuration:
         self.clusters = [Cluster(name=c['name'], host_name=c['host_name'], security=c['security']) for c in clusters]
         self.registries = [Registry(name=r['name'], uri=r['host_name'], description=r['description']) for r in registries]
         self.projects = projects
-
-    def save_to_file(self, save_file_location: str):
-        with open(save_file_location, 'wb') as output:
-            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
 
 
 def load_from_file(config_file_location: str) -> Configuration:
@@ -34,6 +29,7 @@ def load_from_file(config_file_location: str) -> Configuration:
 
 
 def _build_configuration(config_definition) -> Configuration:
+    """Build a configuration object."""
     try:
         config = Configuration(
             config_definition['clusters'],

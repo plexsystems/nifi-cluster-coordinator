@@ -1,6 +1,5 @@
 import logging
 import requests
-import copy
 from .security import Security
 
 revision_0 = {
@@ -22,7 +21,6 @@ class Cluster:
         self.name = name
         self.host_name = host_name
         self.security = Security(security)
-        self.registries = []
 
     def _get_connection_details(self, endpoint: str):
         """Return the connection details for the cluster API calls."""
@@ -69,10 +67,6 @@ class Cluster:
                     **self._get_connection_details(f'/controller/registry-clients/{current_registry_configuration["id"]}'),
                     json=current_registry_configuration)
                 logger.debug(response.text)
-
-                registry = copy.copy(desired_registry_configuration)
-                registry.id = current_registry_configuration['component']['id']
-                self.registries.append(registry)
             except requests.exceptions.RequestException as exception:
                 logger.info(f'Unable to reach {self.name}, will try again later.')
                 logger.warning(exception)
@@ -92,20 +86,26 @@ class Cluster:
                 **self._get_connection_details('/controller/registry-clients'),
                 json=data)
             logger.debug(response.text)
+            if response.status_code != 201:
+                # NiFi clusters which are not configured with keystore/truststores cannot be configured
+                # to talk to https nifi registries.  This will catch
+                logger.warning(response.text)
         except requests.exceptions.RequestException as exception:
             logger.info(f'Unable to reach {self.name}, will try again later.')
             logger.warning(exception)
             self.is_reachable = False
 
-        if response.status_code == 201:
-            r = copy.copy(desired_registry_configuration)
-            r.id = response.json()['id']
-            self.registries.append(r)
-            logger.info(f'Cluster {self.name} added registry {r.name} with id {r.id}')
-        else:
-            # NiFi clusters which are not configured with keystore/truststores cannot be configured
-            # to talk to https nifi registries.  This will catch
-            logger.warning(response.text)
+    def _delete_registry(self, registry):
+        logger = logging.getLogger(__name__)
+        logger.info(f'Deleting registry with id {registry["id"]}')
+        try:
+            response = requests.delete(
+                **self._get_connection_details(f'/controller/registry-clients/{registry["id"]}'),
+                params={'version': registry['revision']['version']})
+            logger.debug(response.text)
+        except requests.exceptions.RequestException as exception:
+            logger.infi(f'Unable to reach {self.name}, will try again later.')
+            logger.warning(exception)
 
     def set_registry_entries(self, configured_registries):
         """Set the cluster nifi-registry entries to their desired configuration."""
@@ -120,11 +120,13 @@ class Cluster:
         registries_current_configuration = {registry['component']['name']: registry for registry in cluster_registries['registries']}
 
         # loop through registries & set appropriate values.
-        for name, configuration_registry, configured_registry in self._registry_munger(registries_desired_configuration, registries_current_configuration):
+        for name, desired_registry_configuration, configured_registry in self._registry_munger(registries_desired_configuration, registries_current_configuration):
             if configured_registry is None:
-                self._create_registry(configuration_registry, configured_registry)
-            elif configuration_registry is None:
+                self._create_registry(desired_registry_configuration, configured_registry)
+            elif desired_registry_configuration is None:
                 # TODO: Delete the registry.
+                logger.warn(f'Deleting {configured_registry}')
+                self._delete_registry(configured_registry)
                 pass
             else:
-                self._update_registry(configuration_registry, configured_registry)
+                self._update_registry(desired_registry_configuration, configured_registry)
