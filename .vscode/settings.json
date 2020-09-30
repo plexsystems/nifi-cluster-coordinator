@@ -1,11 +1,10 @@
 {
+  "python.linting.pylintEnabled": false,
   "python.linting.mypyEnabled": false,
   "python.linting.pycodestyleEnabled": false,
   "python.linting.pydocstyleEnabled": false,
   "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": [
-    "--extend-ignore=W292"
-  ],
+  "python.linting.flake8Args": [ ],
   "python.linting.enabled": true,
   "python.testing.pytestArgs": [
     "test"

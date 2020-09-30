@@ -1,6 +1,35 @@
 clusters:
   - name: foo-cluster
-    cluster_host_name: 'https://foo-cluster/nifi-api'
-    cluster_ssl_cert_file: '/foo/foo-user-cert.pem'
-    cluster_ssl_ca_cert: '/foo/foo-root-ca-cert.pem'
-    cluster_ssl_key_file: '/foo/foo-root-ca-key.pem'
+    host_name: 'https://foo-cluster/nifi-api'
+    security:
+      use_certificate: true
+      certificate_config:
+        ssl_cert_file: '/foo/foo-user-cert.pem'
+        ssl_ca_cert: '/foo/foo-root-ca-cert.pem'
+        ssl_key_file: '/foo/foo-root-ca-key.pem'
+  - name: foo-2-cluser
+    host_name: 'http://foo-2-cluster/nifi-api'
+    security:
+      use_certificate: false
+registries:
+  - name: foo-registry
+    host_name: 'https://foo-registry/nifi-registry'
+    description: 'This is a local registry'
+projects:
+  - name: foo-project
+    registry: foo-registry
+    bucketId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    flowId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    clusters:
+      - cluster_name: foo-cluster
+        environments:
+          - name: integration
+            isVersioned: true
+            version: 3
+          - name: sandbox
+            isVersioned: false
+      - cluster_name: foo-2-cluster
+        environments:
+          - name: production
+            isVersioned: true
+            version: 2
