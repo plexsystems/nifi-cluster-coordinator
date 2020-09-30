@@ -4,11 +4,7 @@
   "python.linting.pycodestyleEnabled": false,
   "python.linting.pydocstyleEnabled": false,
   "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": [
-    "--extend-ignore=W292,W503"
-    // ignore W292 -- bug in autofix can clean this up, ignoring for now
-    // ignore W503 -- W503 is considered best practice W504 is the antipattern
-  ],
+  "python.linting.flake8Args": [ ],
   "python.linting.enabled": true,
   "python.testing.pytestArgs": [
     "test"

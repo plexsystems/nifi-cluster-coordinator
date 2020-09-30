@@ -21,6 +21,7 @@ class Cluster:
         self.name = name
         self.host_name = host_name
         self.security = Security(security)
+        self.is_reachable = False
 
     def _get_connection_details(self, endpoint: str):
         """Return the connection details for the cluster API calls."""
@@ -37,10 +38,14 @@ class Cluster:
         logger.info(f'Connectivity test: {self.name}.')
         try:
             response = requests.get(**self._get_connection_details('/process-groups/root'))
-            logger.debug(response.json())
-            self.is_reachable = True
-            self.root_process_group_id = response.json()['id']
-            logger.info(f'found process group id: {self.root_process_group_id}')
+            logger.debug(response.text)
+            if response.status_code == 200:
+                self.is_reachable = True
+                self.root_process_group_id = response.json()['id']
+                logger.info(f'found process group id: {self.root_process_group_id}')
+            else:
+                logger.warn(f'Connection issues with {self.name}: {response.text}')
+
         except requests.exceptions.RequestException as exception:
             logger.warning(exception)
             logger.info(f'Unable to reach {self.name}, will try again later.')
