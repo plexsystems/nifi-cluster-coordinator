@@ -3,6 +3,7 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import time
 from os import path
+import worker
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ def _on_deleted(event):
 def _on_modified(event):
     logger.debug(event)
     logger.info(f'{event.src_path} was modified.  Processing changes.')
+    worker.process(event.src_path)
 
 
 def _on_moved(event):

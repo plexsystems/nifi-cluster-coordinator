@@ -1,27 +1,18 @@
 import logging
 import coloredlogs
 import argparse
-from configuration import config_loader, config_watcher
+import worker
+from configuration import config_watcher
 
 
 def main(args):
-    logger = logging.getLogger(__name__)
-
     if args.configfile is None:
         raise ValueError('No configuration file specified')
 
-    configuration = config_loader.load_from_file(args.configfile)
-
-    for cluster in configuration.clusters:
-        cluster.test_connectivity()
-
-    for cluster in list(filter(lambda c: c.is_reachable, configuration.clusters)):
-        logger.info(f'Setting registry clients for: {cluster.name}')
-        cluster.set_registry_entries(configuration.registries)
+    worker.process(args.configfile)
 
     if args.watch:
         config_watcher.watch_configuration(args.configfile)
-        # TODO: Implement actual reprocessing of configuration on file change
 
 
 if __name__ == '__main__':

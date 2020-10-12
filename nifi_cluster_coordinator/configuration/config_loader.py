@@ -2,6 +2,7 @@ import yaml
 import logging
 from .cluster import Cluster
 from .registry import Registry
+from .project import Project
 
 
 class Configuration:
@@ -9,7 +10,7 @@ class Configuration:
     def __init__(self, clusters: dict, registries: dict, projects: dict):
         self.clusters = [Cluster(name=c['name'], host_name=c['host_name'], security=c['security']) for c in clusters]
         self.registries = [Registry(name=r['name'], uri=r['host_name'], description=r['description']) for r in registries]
-        self.projects = projects
+        self.projects = [Project(name=p['name'], description=p['description'], registry_name=p['registry_name'], bucket_id=p['bucket_id'], flow_id=p['flow_id'], clusters=p['clusters']) for p in projects]
 
 
 def load_from_file(config_file_location: str) -> Configuration:
