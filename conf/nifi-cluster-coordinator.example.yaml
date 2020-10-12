@@ -1,6 +1,6 @@
 clusters:
   - name: foo-cluster
-    host_name: 'https://foo-cluster/nifi-api'
+    host_name: 'https://foo-cluster'
     security:
       use_certificate: true
       certificate_config:
@@ -17,19 +17,24 @@ registries:
     description: 'This is a local registry'
 projects:
   - name: foo-project
-    registry: foo-registry
-    bucketId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
-    flowId: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    description:  'This is foo project'
+    registry_name: foo-registry
+    bucket_id: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
+    flow_id: a7180a6a-fdaa-4d0f-bdf6-6380e2bfa1a3
     clusters:
       - cluster_name: foo-cluster
         environments:
           - name: integration
-            isVersioned: true
+            description:  'This is an integration environment'
+            is_coordinated: true
             version: 3
           - name: sandbox
-            isVersioned: false
+            description:  'This is a sandbox environment'
+            is_coordinated: false
+            version: latest
       - cluster_name: foo-2-cluster
         environments:
           - name: production
-            isVersioned: true
+            description:  'This is a production environment'
+            is_coordinated: true
             version: 2
