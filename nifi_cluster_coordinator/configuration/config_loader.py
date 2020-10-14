@@ -28,7 +28,7 @@ class Configuration:
                 is_coordinated=pc['is_coordinated'],
                 parameters=pc['parameters'] if 'parameters' in pc else [])
             for pc in parameter_contexts
-        ]
+        ] if not (parameter_contexts is None) else []
 
 
 def load_from_file(config_file_location: str) -> Configuration:
