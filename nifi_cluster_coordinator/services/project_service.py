@@ -6,13 +6,13 @@ from configuration.cluster import Cluster
 from configuration.project import Project
 
 
-def sync(cluster: Cluster, configured_projects: list):
+def sync(cluster: Cluster, configured_projects: list, parameter_contexts: list):
     """Set the cluster projects to their desired configuration."""
     logger = logging.getLogger(__name__)
 
     desired_projects = list(filter(lambda p: len([c for c in p.clusters if c.name.lower() == cluster.name.lower()]) > 0, configured_projects))
 
-    logger.info(f'Collecting currently configure projects for: {cluster.name}')
+    logger.info(f'Collecting currently configure projects for cluster: {cluster.name}')
     response = requests.get(
         **cluster._get_connection_details(
             '/' + url_helper.construct_path_parts(['process-groups', cluster.root_process_group_id, 'process-groups']))).json()
@@ -23,12 +23,12 @@ def sync(cluster: Cluster, configured_projects: list):
 
     for desired_project in desired_projects:
         if desired_project.name in current_projects_json_dict:
-            _update(cluster, desired_project, current_projects_json_dict[desired_project.name])
+            _update(cluster, desired_project, current_projects_json_dict[desired_project.name], parameter_contexts)
         else:
-            _create(cluster, desired_project)
+            _create(cluster, desired_project, parameter_contexts)
 
 
-def _create(cluster: Cluster, project: Project):
+def _create(cluster: Cluster, project: Project, parameter_contexts: list):
     logger = logging.getLogger(__name__)
 
     project_cluster = project.get_project_cluster(cluster)
@@ -53,17 +53,17 @@ def _create(cluster: Cluster, project: Project):
             logger.warning(response.text)
             return
         project_cluster.project_process_group_id = response.json()['id']
-        logger.info(f'Created project: {project.name}.')
+        logger.info(f'Created project: {project.name}, in cluster: {cluster.name}.')
     except requests.exceptions.RequestException as exception:
-        logger.warning(f'Unable to create project: {project.name}, will try again later.')
+        logger.warning(f'Unable to create project: {project.name}, in cluster: {cluster.name}.')
         logger.warning(exception)
         return
 
     _get_available_versions(cluster, project)
-    environment_service.sync(cluster, project, project_cluster)
+    environment_service.sync(cluster, project, project_cluster, parameter_contexts)
 
 
-def _update(cluster: Cluster, project: Project, current_project_json):
+def _update(cluster: Cluster, project: Project, current_project_json, parameter_contexts: list):
     logger = logging.getLogger(__name__)
 
     project_cluster = project.get_project_cluster(cluster)
@@ -81,14 +81,17 @@ def _update(cluster: Cluster, project: Project, current_project_json):
             if response.status_code != 200:
                 logger.warning(response.text)
                 return
-            logger.info(f'Updated project: {project.name}, with new description: {project.description}.')
+            logger.info(f'Updated project: {project.name}, in cluster: {cluster.name}, with new description: {project.description}.')
         except requests.exceptions.RequestException as exception:
-            logger.warning(f'Unable to update project: {project.name}, will try again later.')
+            logger.warning(f'Unable to update project: {project.name}, in cluster: {cluster.name}.')
             logger.warning(exception)
             return
 
+    else:
+        logger.info(f'Project: {project.name}, in cluster: {cluster.name}, is up-to-date.')
+
     _get_available_versions(cluster, project)
-    environment_service.sync(cluster, project, project_cluster)
+    environment_service.sync(cluster, project, project_cluster, parameter_contexts)
 
 
 def _delete(cluster: Cluster, delete_project_json):

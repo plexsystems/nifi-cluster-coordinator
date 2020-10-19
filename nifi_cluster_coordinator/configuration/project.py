@@ -3,18 +3,27 @@ from .cluster import Cluster
 
 class ProjectEnvironment:
 
-    def __init__(self, name, description, is_coordinated, version):
+    def __init__(self, name, description, is_coordinated, version, parameter_context_name):
         self.name = name
         self.description = description
         self.is_coordinated = is_coordinated
         self.version = version
+        self.parameter_context_name = parameter_context_name
 
 
 class ProjectCluster:
 
     def __init__(self, name, environments):
         self.name = name
-        self.environments = [ProjectEnvironment(name=e['name'], description=e['description'], is_coordinated=e['is_coordinated'], version=e['version']) for e in environments]
+        self.environments = [
+            ProjectEnvironment(
+                name=e['name'],
+                description=e['description'],
+                is_coordinated=e['is_coordinated'],
+                version=e['version'],
+                parameter_context_name=e['parameter_context_name'])
+            for e in environments
+        ]
         self.project_process_group_id = ''
 
 
@@ -32,5 +41,5 @@ class Project:
     def get_project_cluster(self, cluster: Cluster) -> ProjectCluster:
         clusters = [c for c in self.clusters if c.name.lower() == cluster.name.lower()]
         if len(clusters) == 0:
-            None
+            return None
         return clusters[0]

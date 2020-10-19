@@ -28,13 +28,44 @@ projects:
             description:  'This is an integration environment'
             is_coordinated: true
             version: 3
+            parameter_context_name: 'foo-parameter-context'
           - name: sandbox
             description:  'This is a sandbox environment'
             is_coordinated: false
             version: latest
+            parameter_context_name: 'foo-2-parameter-context'
       - cluster_name: foo-2-cluster
         environments:
           - name: production
             description:  'This is a production environment'
             is_coordinated: true
             version: 2
+            parameter_context_name: 'foo-parameter-context'
+parameter_contexts:
+  - name: 'foo-parameter-context'
+    description: 'This is foo parameter context'
+    is_coordinated: true
+    parameters:
+      - name: 'foo-param-1'
+        description:  'This is foo 1 param 1'
+        is_sensitive: false          
+        value: 'foo-value-1'
+      - name: 'foo-param-2'
+        description: 'This is foo 1 param 2'
+        is_sensitive: false          
+        value: 'foo-value-2'
+  - name: 'foo-2-parameter-context'
+    description: 'This is foo 2 parameter context'
+    is_coordinated: true
+    parameters:
+      - name: 'foo-2-param-1'
+        description: 'This is foo 2 param 1'
+        is_sensitive: false          
+        value: 'foo-2-value-1'
+      - name: 'foo-2-param-2'
+        description: 'This is foo 2 param 2'
+        is_sensitive: false          
+        value: 'foo-2-value-2'
+  - name: 'foo-uncoordinated-parameter-context'
+    description: 'This is uncoordinated parameter context'
+    is_coordinated: false
