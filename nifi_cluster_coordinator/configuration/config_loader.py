@@ -4,11 +4,12 @@ from .cluster import Cluster
 from .registry import Registry
 from .project import Project
 from .parameter_context import ParameterContext
+from .security import Security
 
 
 class Configuration:
 
-    def __init__(self, clusters: dict, registries: dict, projects: dict, parameter_contexts: dict):
+    def __init__(self, clusters: dict, registries: dict, projects: dict, parameter_contexts: dict, security: dict):
         self.clusters = [Cluster(name=c['name'], host_name=c['host_name'], security=c['security']) for c in clusters]
         self.registries = [Registry(name=r['name'], uri=r['host_name'], description=r['description']) for r in registries]
         self.projects = [
@@ -21,6 +22,7 @@ class Configuration:
                 clusters=p['clusters'])
             for p in projects
         ]
+
         self.parameter_contexts = [
             ParameterContext(
                 name=pc['name'],
@@ -29,6 +31,8 @@ class Configuration:
                 parameters=pc['parameters'] if 'parameters' in pc else [])
             for pc in parameter_contexts
         ] if not (parameter_contexts is None) else []
+
+        self.security = Security(security) if not (security is None) else {'is_coordinated': False}
 
 
 def load_from_file(config_file_location: str) -> Configuration:
@@ -54,7 +58,8 @@ def _build_configuration(config_definition) -> Configuration:
             config_definition['clusters'],
             config_definition['registries'],
             config_definition['projects'],
-            config_definition['parameter_contexts'])
+            config_definition['parameter_contexts'],
+            config_definition['security'])
         return config
     except Exception as e:
         logging.critical(f'Error parsing configuration file: {e}')

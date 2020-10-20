@@ -1,6 +1,6 @@
 import logging
 import requests
-from .security import Security
+from .security import ClusterSecurity
 
 revision_0 = {
     'version': 0
@@ -22,7 +22,7 @@ class Cluster:
     def __init__(self, name: str, host_name: str, security: dict):
         self.name = name
         self.host_name = host_name
-        self.security = Security(security)
+        self.security = ClusterSecurity(security)
         self.is_reachable = False
         self.registeries_json_dict = None
 
