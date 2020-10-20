@@ -160,18 +160,21 @@ There are two types of `access policies` that can be applied to a resource:
 
 You can create and apply `access policies` on both `global` and `component` levels.
 
-List of `global` access policy names:
+List of readonly `global` access policy names:
 
-`view the UI` (readonly)
+`view the UI`
+`query provenance`
+`retrieve site-to-site details`
+`view system diagnostics`
+`proxy user requests`
+
+List of read-write `global` access policy names:
+
 `access the controller`
 `access parameter contexts`
-`query provenance` (readonly)
 `access restricted components`
 `access all policies`
 `access users/user groups`
-`retrieve site-to-site details` (readonly)
-`view system diagnostics` (readonly)
-`proxy user requests` (readonly)
 `access counters`
 
 List of `component` access policy names:
@@ -188,7 +191,9 @@ List of `component` access policy names:
 List of `component` types that can be defined:
 
 `nifi flow` with name `root` for applying `component` access policy to the root nifi flow
+
 `project` with project names described in `projects` section for applying `component` access policy to project process group
+
 `environment` with envronment names described in `projects` section in project:environment format for applying `component` access policy to project environment process group
 
 ```yaml
