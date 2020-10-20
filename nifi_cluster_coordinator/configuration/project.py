@@ -9,6 +9,7 @@ class ProjectEnvironment:
         self.is_coordinated = is_coordinated
         self.version = version
         self.parameter_context_name = parameter_context_name
+        self.process_group_id = ''
 
 
 class ProjectCluster:

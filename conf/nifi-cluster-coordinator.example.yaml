@@ -69,3 +69,101 @@ parameter_contexts:
   - name: 'foo-uncoordinated-parameter-context'
     description: 'This is uncoordinated parameter context'
     is_coordinated: false
+#-------------------------------------------------------
+# Coordinated global access policy names
+#-------------------------------------------------------
+# view the UI (readonly)
+# access the controller
+# access parameter contexts
+# query provenance (readonly)
+# access restricted components
+# access all policies
+# access users/user groups
+# retrieve site-to-site details (readonly)
+# view system diagnostics (readonly)
+# proxy user requests (readonly)
+# access counters
+#-------------------------------------------------------
+# Coordinated component access policy names
+#-------------------------------------------------------
+# view the component
+# modify the component
+# operate the component
+# view provenance
+# view the data
+# modify the data
+# view the policies
+# modify the policies
+#-------------------------------------------------------
+# Coordinated component types and names
+#-------------------------------------------------------
+#   nifi flow - root
+#   project - <project name>
+#   environment - <project name>:<environment name>
+#-------------------------------------------------------
+security:
+  is_coordinated: true
+  users:
+    - 'foo-user'
+    - 'bar-user'
+  user_groups:
+    - identity: 'foo-group'
+      members:
+        - 'foo-user'
+  global_access_policies:
+    - name: 'view the UI'
+      action: 'read'
+      users:
+        - 'bar-user'
+      user_groups:
+        - 'foo-group'
+    - name: 'access the controller'
+      action: 'read'
+      users:
+        - 'bar-user'
+      user_groups:
+        - 'foo-group'
+    - name: 'access the controller'
+      action: 'write'
+      users:
+      user_groups:
+        - 'foo-group'
+  component_access_policies:
+    - name: 'view the component'
+      component_type: 'nifi flow'
+      component_name: 'root'
+      users:
+      user_groups:
+        - 'foo-group'
+    - name: 'modify the component'
+      component_type: 'nifi flow'
+      component_name: 'root'
+      users:
+      user_groups:
+        - 'foo-group'
+    - name: 'view the component'
+      component_type: 'project'
+      component_name: 'foo-project'
+      users:
+      user_groups:
+        - 'foo-group'
+    - name: 'modify the component'
+      component_type: 'project'
+      component_name: 'foo-project'
+      users:
+      user_groups:
+        - 'foo-group'
+    - name: 'view the component'
+      component_type: 'environment'
+      component_name: 'foo-project:integration'
+      users:
+        - 'bar-user'
+      user_groups:
+        - 'foo-group'
+    - name: 'modify the component'
+      component_type: 'environment'
+      component_name: 'foo-project:integration'
+      users:
+        - 'bar-user'
+      user_groups:
+        - 'foo-group'

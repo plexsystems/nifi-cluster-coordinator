@@ -76,8 +76,11 @@ def _create(
         if response.status_code != 201:
             logger.warning(response.text)
             return
+
+        response_json = response.json()
+        environment.process_group_id = response_json['id']
         logger.info(f'Created project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
-        _update(cluster, project, project_cluster, environment, response.json(), parameter_contexts)
+        _update(cluster, project, project_cluster, environment, response_json, parameter_contexts)
     except requests.exceptions.RequestException as exception:
         logger.warning(f'Unable to create project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
         logger.warning(exception)
@@ -92,6 +95,8 @@ def _update(
     parameter_contexts: list
 ):
     logger = logging.getLogger(__name__)
+
+    environment.process_group_id = environment_json['id']
 
     desired_version = _get_desired_version(project, environment)
     if desired_version is None:
