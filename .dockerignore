@@ -1,5 +1,5 @@
 *
-!src
+!nifi_cluster_coordinator
 !requirements.txt
 *.pyc
 *.log.*
