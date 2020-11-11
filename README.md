@@ -162,31 +162,31 @@ You can create and apply `access policies` on both `global` and `component` leve
 
 List of readonly `global` access policy names:
 
-`view the UI`
-`query provenance`
-`retrieve site-to-site details`
-`view system diagnostics`
-`proxy user requests`
+* `view the UI`
+* `query provenance`
+* `retrieve site-to-site details`
+* `view system diagnostics`
+* `proxy user requests`
 
 List of read-write `global` access policy names:
 
-`access the controller`
-`access parameter contexts`
-`access restricted components`
-`access all policies`
-`access users/user groups`
-`access counters`
+* `access the controller`
+* `access parameter contexts`
+* `access restricted components`
+* `access all policies`
+* `access users/user groups`
+* `access counters`
 
 List of `component` access policy names:
 
-`view the component`
-`modify the component`
-`operate the component`
-`view provenance`
-`view the data`
-`modify the data`
-`view the policies`
-`modify the policies`
+* `view the component`
+* `modify the component`
+* `operate the component`
+* `view provenance`
+* `view the data`
+* `modify the data`
+* `view the policies`
+* `modify the policies`
 
 List of `component` types that can be defined:
 
@@ -264,6 +264,28 @@ security:
       user_groups:
         - 'foo-group'
 ```
+
+## Cluster Coordinator Permissions
+
+In secured clusters, the user that the coordinator runs as needs the following permissions
+
+Global Permissions
+* View the user interface
+* Access the controller __view__
+* Access the controller __modify__
+* Access Parameter Contexts __view__
+* Access Parameter Contexts __modify__
+* Access users/user groups __view__
+* Access users/user groups __modify__
+* Access all polices __view__
+* Access all policies __modify__
+
+Root Process Group Permissions
+* View the component
+* Modify the component
+* View the polices
+* Modify the policies
+
 
 ## Developing
 
