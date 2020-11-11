@@ -24,7 +24,7 @@ class ProjectCluster:
                 version=e['version'],
                 parameter_context_name=e['parameter_context_name'])
             for e in environments
-        ]
+        ] if not (environments is None) else []
         self.project_process_group_id = ''
 
 
@@ -36,7 +36,12 @@ class Project:
         self.registry_name = registry_name
         self.bucket_id = bucket_id
         self.flow_id = flow_id
-        self.clusters = [ProjectCluster(name=c['cluster_name'], environments=c['environments']) for c in clusters]
+        self.clusters = [
+            ProjectCluster(
+                name=c['cluster_name'],
+                environments=c['environments'] if 'environments' in c else [])
+            for c in clusters
+        ] if not (clusters is None) else []
         self.available_versions_dict = None
 
     def get_project_cluster(self, cluster: Cluster) -> ProjectCluster:

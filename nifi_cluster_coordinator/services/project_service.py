@@ -102,7 +102,7 @@ def _delete(cluster: Cluster, delete_project_json):
     try:
         response = requests.delete(
             **cluster._get_connection_details(delete_url),
-            params={'clientId': delete_project_json['revision']['clientId'], 'version': str(delete_project_json['revision']['version'])})
+            params={'version': str(delete_project_json['revision']['version'])})
         if response.status_code != 200:
             logger.warning(response.text)
             return
