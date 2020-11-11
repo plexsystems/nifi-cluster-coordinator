@@ -17,11 +17,11 @@ class Configuration:
                 name=p['name'],
                 description=p['description'],
                 registry_name=p['registry_name'],
-                bucket_id=p['bucket_id'],
-                flow_id=p['flow_id'],
-                clusters=p['clusters'])
+                bucket_id=p['bucket_id'] if 'bucket_id' in p else '',
+                flow_id=p['flow_id'] if 'flow_id' in p else '',
+                clusters=p['clusters'] if 'clusters' in p else [])
             for p in projects
-        ]
+        ] if not (projects is None) else []
 
         self.parameter_contexts = [
             ParameterContext(
@@ -32,7 +32,7 @@ class Configuration:
             for pc in parameter_contexts
         ] if not (parameter_contexts is None) else []
 
-        self.security = Security(security) if not (security is None) else {'is_coordinated': False}
+        self.security = Security(security) if not (security is None) else Security({'is_coordinated': False})
 
 
 def load_from_file(config_file_location: str) -> Configuration:
@@ -57,9 +57,9 @@ def _build_configuration(config_definition) -> Configuration:
         config = Configuration(
             config_definition['clusters'],
             config_definition['registries'],
-            config_definition['projects'],
-            config_definition['parameter_contexts'],
-            config_definition['security'])
+            config_definition['projects'] if 'projects' in config_definition else None,
+            config_definition['parameter_contexts'] if 'parameter_contexts' in config_definition else None,
+            config_definition['security'] if 'security' in config_definition else None)
         return config
     except Exception as e:
         logging.critical(f'Error parsing configuration file: {e}')

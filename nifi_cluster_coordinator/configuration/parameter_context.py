@@ -20,5 +20,5 @@ class ParameterContext:
                 is_sensitive=p['is_sensitive'],
                 value=p['value'])
             for p in parameters
-        ]
+        ] if not (parameters is None) else []
         self.id = None
