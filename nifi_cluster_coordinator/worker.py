@@ -23,12 +23,6 @@ def process(configfile):
         logger.info(f'Setting registry clients for cluster: {cluster.name}')
         registry_service.sync(cluster, configuration.registries)
 
-        logger.info(f'Setting parameter contexts for cluster: {cluster.name}')
-        parameter_context_service.sync(cluster, configuration.parameter_contexts)
-
-        logger.info(f'Setting projects for cluster: {cluster.name}')
-        project_service.sync(cluster, configuration.projects, configuration.parameter_contexts)
-
         if configuration.security.is_coordinated:
             logger.info(f'Setting users for cluster: {cluster.name}')
             user_service.sync(cluster, configuration.security.users)
@@ -36,5 +30,15 @@ def process(configfile):
             logger.info(f'Setting user groups for cluster: {cluster.name}')
             user_group_service.sync(cluster, configuration.security.user_groups, configuration.security.users)
 
-            logger.info(f'Setting access policies for cluster: {cluster.name}')
-            access_policy_service.sync(cluster, configuration.security, configuration.projects)
+            logger.info(f'Setting global access policies for cluster: {cluster.name}')
+            access_policy_service.sync_global_policies(cluster, configuration.security)
+
+        logger.info(f'Setting parameter contexts for cluster: {cluster.name}')
+        parameter_context_service.sync(cluster, configuration.parameter_contexts)
+
+        logger.info(f'Setting projects for cluster: {cluster.name}')
+        project_service.sync(cluster, configuration.projects, configuration.parameter_contexts)
+
+        if configuration.security.is_coordinated:
+            logger.info(f'Setting component access policies for cluster: {cluster.name}')
+            access_policy_service.sync_component_policies(cluster, configuration.security, configuration.projects)

@@ -80,7 +80,8 @@ class Security:
 
 class AccessPolicyDescriptor:
 
-    def __init__(self, name: str, resource: str, action: str):
+    def __init__(self, name: str, resource: str, action: str, required_by_coordinator: bool):
         self.name = name
         self.resource = resource
         self.action = action
+        self.required_by_coordinator = required_by_coordinator

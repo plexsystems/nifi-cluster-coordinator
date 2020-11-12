@@ -2,45 +2,50 @@ import logging
 import requests
 import utils.url_helper as url_helper
 from configuration.cluster import Cluster
-from configuration.security import AccessPolicyDescriptor, ComponentAccessPolicy, Security
+from configuration.security import AccessPolicyDescriptor, ComponentAccessPolicy, GlobalAccessPolicy, Security
 
 
 def init_access_policies_descriptors():
     global global_access_policies_descriptors, component_access_policies_descriptors
 
     global_access_policies_descriptors = [
-        AccessPolicyDescriptor('view the UI', 'flow', 'read'),
-        AccessPolicyDescriptor('access the controller', 'controller', 'read'),
-        AccessPolicyDescriptor('access the controller', 'controller', 'write'),
-        AccessPolicyDescriptor('access parameter contexts', 'parameter-contexts', 'read'),
-        AccessPolicyDescriptor('access parameter contexts', 'parameter-contexts', 'write'),
-        AccessPolicyDescriptor('query provenance', 'provenance', 'read'),
-        AccessPolicyDescriptor('access restricted components', 'restricted-components', 'read'),
-        AccessPolicyDescriptor('access restricted components', 'restricted-components', 'write'),
-        AccessPolicyDescriptor('access all policies', 'policies', 'read'),
-        AccessPolicyDescriptor('access all policies', 'policies', 'write'),
-        AccessPolicyDescriptor('access users/user groups', 'tenants', 'read'),
-        AccessPolicyDescriptor('access users/user groups', 'tenants', 'write'),
-        AccessPolicyDescriptor('retrieve site-to-site details', 'site-to-site', 'read'),
-        AccessPolicyDescriptor('view system diagnostics', 'system', 'read'),
-        AccessPolicyDescriptor('proxy user requests', 'proxy', 'read'),
-        AccessPolicyDescriptor('access counters', 'counters', 'read'),
-        AccessPolicyDescriptor('access counters', 'counters', 'write')
+        AccessPolicyDescriptor('view the UI', 'flow', 'read', True),
+        AccessPolicyDescriptor('access the controller', 'controller', 'read', True),
+        AccessPolicyDescriptor('access the controller', 'controller', 'write', True),
+        AccessPolicyDescriptor('access parameter contexts', 'parameter-contexts', 'read', True),
+        AccessPolicyDescriptor('access parameter contexts', 'parameter-contexts', 'write', True),
+        AccessPolicyDescriptor('query provenance', 'provenance', 'read', False),
+        AccessPolicyDescriptor('access restricted components', 'restricted-components', 'read', False),
+        AccessPolicyDescriptor('access restricted components', 'restricted-components', 'write', False),
+        AccessPolicyDescriptor('access all policies', 'policies', 'read', True),
+        AccessPolicyDescriptor('access all policies', 'policies', 'write', True),
+        AccessPolicyDescriptor('access users/user groups', 'tenants', 'read', True),
+        AccessPolicyDescriptor('access users/user groups', 'tenants', 'write', True),
+        AccessPolicyDescriptor('retrieve site-to-site details', 'site-to-site', 'read', False),
+        AccessPolicyDescriptor('view system diagnostics', 'system', 'read', False),
+        AccessPolicyDescriptor('proxy user requests', 'proxy', 'read', False),
+        AccessPolicyDescriptor('access counters', 'counters', 'read', False),
+        AccessPolicyDescriptor('access counters', 'counters', 'write', False)
     ]
 
     component_access_policies_descriptors = [
-        AccessPolicyDescriptor('view the component', 'process-groups/{id}', 'read'),
-        AccessPolicyDescriptor('modify the component', 'process-groups/{id}', 'write'),
-        AccessPolicyDescriptor('operate the component', 'operation/process-groups/{id}', 'write'),
-        AccessPolicyDescriptor('view provenance', 'provenance-data/process-groups/{id}', 'read'),
-        AccessPolicyDescriptor('view the data', 'data/process-groups/{id}', 'read'),
-        AccessPolicyDescriptor('modify the data', 'data/process-groups/{id}', 'write'),
-        AccessPolicyDescriptor('view the policies', 'policies/process-groups/{id}', 'read'),
-        AccessPolicyDescriptor('modify the policies', 'policies/process-groups/{id}', 'write')
+        AccessPolicyDescriptor('view the component', 'process-groups/{id}', 'read', True),
+        AccessPolicyDescriptor('modify the component', 'process-groups/{id}', 'write', True),
+        AccessPolicyDescriptor('operate the component', 'operation/process-groups/{id}', 'write', False),
+        AccessPolicyDescriptor('view provenance', 'provenance-data/process-groups/{id}', 'read', False),
+        AccessPolicyDescriptor('view the data', 'data/process-groups/{id}', 'read', False),
+        AccessPolicyDescriptor('modify the data', 'data/process-groups/{id}', 'write', False),
+        AccessPolicyDescriptor('view the policies', 'policies/process-groups/{id}', 'read', True),
+        AccessPolicyDescriptor('modify the policies', 'policies/process-groups/{id}', 'write', True)
     ]
 
 
 def sync(cluster: Cluster, security: Security, configured_projects: list):
+    sync_global_policies(cluster, security)
+    sync_component_policies(cluster, security, configured_projects)
+
+
+def sync_global_policies(cluster: Cluster, security: Security):
     """Set the cluster users to desired configuration."""
     logger = logging.getLogger(__name__)
 
@@ -54,6 +59,17 @@ def sync(cluster: Cluster, security: Security, configured_projects: list):
             if a.name.lower() == access_policy_descriptor.name.lower()
             and a.action.lower() == access_policy_descriptor.action.lower()
         ]
+
+        if access_policy_descriptor.required_by_coordinator:
+            if len(configured_access_policies) == 0:
+                configured_access_policies.append(
+                    GlobalAccessPolicy(
+                        name=access_policy_descriptor.name,
+                        action=access_policy_descriptor.action,
+                        users=[current_user_json['component']['identity']],
+                        user_groups=[]))
+            elif len([u for u in configured_access_policies[0].users if u.lower() == current_user_json['component']['identity'].lower()]) == 0:
+                configured_access_policies[0].users.append(current_user_json['component']['identity'])
 
         access_policy_json = _get_access_policy_json(cluster, access_policy_descriptor, None)
         if len(configured_access_policies) == 0:
@@ -94,12 +110,35 @@ def sync(cluster: Cluster, security: Security, configured_projects: list):
                     current_user_json,
                     None)
 
+
+def sync_component_policies(cluster: Cluster, security: Security, configured_projects: list):
+    """Set the cluster users to desired configuration."""
+    logger = logging.getLogger(__name__)
+
+    logger.info(f'Getting coordinator user for cluster: {cluster.name}')
+    current_user_json = _get_current_user_json(cluster)
+
     # sync component policies
     for access_policy_descriptor in component_access_policies_descriptors:
         configured_access_policies = [
             a for a in security.component_access_policies
             if a.name.lower() == access_policy_descriptor.name.lower()
         ]
+
+        if access_policy_descriptor.required_by_coordinator:
+            root_policies = [p for p in configured_access_policies if p.component_type.lower() == 'nifi flow' and p.component_name.lower() == 'root']
+            if len(root_policies) == 0:
+                configured_access_policies.insert(
+                    0,
+                    ComponentAccessPolicy(
+                        name=access_policy_descriptor.name,
+                        component_type='nifi flow',
+                        component_name='root',
+                        users=[current_user_json['component']['identity']],
+                        user_groups=[]))
+            for access_policy in configured_access_policies:
+                if len([u for u in access_policy.users if u.lower() == current_user_json['component']['identity'].lower()]) == 0:
+                    access_policy.users.append(current_user_json['component']['identity'])
 
         for configured_access_policy in configured_access_policies:
             component_id = _get_component_id(cluster, configured_access_policy, configured_projects)
@@ -191,8 +230,11 @@ def _update(
     if component_id:
         resource = resource.replace('{id}', component_id)
 
-    desired_policy_users = [p for p in policy_users]
-    append_current_user = _does_current_user_has_policy(access_policy_descriptor.action, resource, current_user_json)
+    desired_policy_users = policy_users
+    append_current_user = (
+        _does_current_user_has_policy(access_policy_descriptor.action, resource, current_user_json)
+        and len([u for u in desired_policy_users if u.lower() == current_user_json['component']['identity'].lower()]) == 0)
+
     if append_current_user:
         desired_policy_users.append(current_user_json['component']['identity'])
 
@@ -223,7 +265,7 @@ def _update(
             logger.warning(f'Unable to update access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
             logger.warning(exception)
     else:
-        logger.info(f'Access policicy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}, is up-to-date.')
+        logger.info(f'Access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}, is up-to-date.')
 
 
 def _delete(cluster: Cluster, access_policy_descriptor: AccessPolicyDescriptor, delete_access_policy_json):
