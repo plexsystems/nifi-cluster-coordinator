@@ -80,6 +80,7 @@ def _update(cluster: Cluster, user_group: UserGroup, current_user_group_json, co
     logger = logging.getLogger(__name__)
 
     user_group.component_id = current_user_group_json['id']
+    user_group.revision_version = current_user_group_json['revision']['version']
 
     if _did_members_change(user_group, current_user_group_json):
         url = '/' + url_helper.construct_path_parts(['tenants', 'user-groups', current_user_group_json['id']])
@@ -90,7 +91,7 @@ def _update(cluster: Cluster, user_group: UserGroup, current_user_group_json, co
             if len(users) > 0:
                 current_user_group_json['component']['users'].append({
                     'revision': {
-                        'version': 0
+                        'version': users[0].revision_version
                     },
                     'id': users[0].component_id,
                     'component': {
@@ -107,6 +108,8 @@ def _update(cluster: Cluster, user_group: UserGroup, current_user_group_json, co
                 logger.warning(f'Unable to update members for user group: {user_group.identity}, in cluster: {cluster.name}.')
                 logger.warning(response.text)
                 return
+
+            user_group.revision_version = response.json()['revision']['version']
             logger.info(f'Updated members for user group: {user_group.identity}, in cluster: {cluster.name}.')
         except requests.exceptions.RequestException as exception:
             logger.warning(f'Unable to update members for user group: {user_group.identity}, in cluster: {cluster.name}.')

@@ -15,7 +15,9 @@ def sync(cluster: Cluster, configured_users: list):
             '/' + url_helper.construct_path_parts(['flow', 'current-user']))).json()
     current_user_identity = response['identity']
 
-    desired_users = list(filter(lambda u: u.identity.lower() != current_user_identity.lower(), configured_users))
+    desired_users = configured_users
+    if len([u for u in desired_users if u.identity.lower() == current_user_identity.lower()]) == 0:
+        desired_users.append(User(current_user_identity))
 
     logger.info(f'Collecting currently configured users for cluster: {cluster.name}')
     response = requests.get(
@@ -69,6 +71,7 @@ def _update(cluster: Cluster, user: User, current_user_json):
     logger = logging.getLogger(__name__)
 
     user.component_id = current_user_json['id']
+    user.revision_version = current_user_json['revision']['version']
     logger.info(f'User: {user.identity}, in cluster: {cluster.name}, already exists.')
 
 

@@ -15,6 +15,7 @@ class User():
     def __init__(self, identity: str):
         self.identity = identity
         self.component_id = ''
+        self.revision_version = 0
 
 
 class UserGroup(User):
@@ -35,12 +36,13 @@ class GlobalAccessPolicy:
 
 class ComponentAccessPolicy:
 
-    def __init__(self, name: str, component_type: str, component_name: str, users: list, user_groups: list):
+    def __init__(self, name: str, component_type: str, component_name: str, users: list, user_groups: list, inherited: bool):
         self.name = name
         self.component_type = component_type
         self.component_name = component_name
         self.users = users if not(users is None) else []
         self.user_groups = user_groups if not(user_groups is None) else []
+        self.inherited = inherited
 
 
 class Security:
@@ -73,14 +75,16 @@ class Security:
                 component_type=cap['component_type'],
                 component_name=cap['component_name'],
                 users=cap['users'] if 'users' in cap else [],
-                user_groups=cap['user_groups'] if 'user_groups' in cap else [])
+                user_groups=cap['user_groups'] if 'user_groups' in cap else [],
+                inherited=cap['inherited'] if 'inherited' in cap else False)
             for cap in security['component_access_policies']
         ] if 'component_access_policies' in security and not(security['component_access_policies'] is None) else []
 
 
 class AccessPolicyDescriptor:
 
-    def __init__(self, name: str, resource: str, action: str):
+    def __init__(self, name: str, resource: str, action: str, required_by_coordinator: bool):
         self.name = name
         self.resource = resource
         self.action = action
+        self.required_by_coordinator = required_by_coordinator

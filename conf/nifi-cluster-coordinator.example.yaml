@@ -69,9 +69,9 @@ parameter_contexts:
   - name: 'foo-uncoordinated-parameter-context'
     description: 'This is uncoordinated parameter context'
     is_coordinated: false
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 # Coordinated global access policy names
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 # view the UI (readonly)
 # access the controller
 # access parameter contexts
@@ -83,9 +83,9 @@ parameter_contexts:
 # view system diagnostics (readonly)
 # proxy user requests (readonly)
 # access counters
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 # Coordinated component access policy names
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 # view the component
 # modify the component
 # operate the component
@@ -94,13 +94,17 @@ parameter_contexts:
 # modify the data
 # view the policies
 # modify the policies
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 # Coordinated component types and names
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 #   nifi flow - root
 #   project - <project name>
 #   environment - <project name>:<environment name>
-#-------------------------------------------------------
+#-----------------------------------------------------------------
+# Component policy notes:
+# - All component policies are overrides
+# - Set 'inherited' property to 'true' to delete an override
+#-----------------------------------------------------------------
 security:
   is_coordinated: true
   users:
@@ -167,3 +171,7 @@ security:
         - 'bar-user'
       user_groups:
         - 'foo-group'
+    - name: 'modify the component'
+      component_type: 'environment'
+      component_name: 'foo-2-cluster:production'
+      inherited: true
