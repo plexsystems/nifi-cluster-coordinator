@@ -71,6 +71,7 @@ def _update(cluster: Cluster, user: User, current_user_json):
     logger = logging.getLogger(__name__)
 
     user.component_id = current_user_json['id']
+    user.revision_version = current_user_json['revision']['version']
     logger.info(f'User: {user.identity}, in cluster: {cluster.name}, already exists.')
 
 

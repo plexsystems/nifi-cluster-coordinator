@@ -72,43 +72,70 @@ def sync_global_policies(cluster: Cluster, security: Security):
                 configured_access_policies[0].users.append(current_user_json['component']['identity'])
 
         access_policy_json = _get_access_policy_json(cluster, access_policy_descriptor, None)
-        if len(configured_access_policies) == 0:
-            if not(access_policy_json is None):
-                if _does_current_user_has_policy(access_policy_descriptor.action, access_policy_descriptor.resource, current_user_json):
+        if (
+            not (access_policy_json is None)
+            and '/' + access_policy_descriptor.resource.lower() != access_policy_json['component']['resource'].lower()
+        ):
+            # create global policy override for the resource
+            policy_override_users = []
+            policy_override_user_groups = []
+            if len(configured_access_policies) > 0:
+                policy_override_users = configured_access_policies[0].users
+                policy_override_user_groups = configured_access_policies[0].user_groups
+            _create(
+                cluster,
+                access_policy_descriptor,
+                policy_override_users,
+                policy_override_user_groups,
+                security.users,
+                security.user_groups,
+                None)
+        else:
+            if len(configured_access_policies) == 0:
+                if not(access_policy_json is None):
+                    # global policy is not in config but exists with current or coordinator user, remove other users and groups
+                    if _does_current_user_has_policy(access_policy_descriptor.action, access_policy_descriptor.resource, current_user_json):
+                        _update(
+                            cluster,
+                            access_policy_descriptor,
+                            [],
+                            [],
+                            security.users,
+                            security.user_groups,
+                            access_policy_json,
+                            current_user_json,
+                            None)
+                    # global policy is not in config and does not have cuurent or coordinator user, delete the policy
+                    else:
+                        _delete(cluster, access_policy_descriptor, access_policy_json, None)
+                else:
+                    logger.info(
+                        f'Access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{access_policy_descriptor.resource}, in cluster: {cluster.name}, is up-to-date.')
+
+            else:
+                configured_access_policy = configured_access_policies[0]
+                if access_policy_json is None:
+                    # create global policy for the resource
+                    _create(
+                        cluster,
+                        access_policy_descriptor,
+                        configured_access_policy.users,
+                        configured_access_policy.user_groups,
+                        security.users,
+                        security.user_groups,
+                        None)
+                else:
+                    # update global policy for the resource
                     _update(
                         cluster,
                         access_policy_descriptor,
-                        [],
-                        [],
+                        configured_access_policy.users,
+                        configured_access_policy.user_groups,
                         security.users,
                         security.user_groups,
                         access_policy_json,
                         current_user_json,
                         None)
-                else:
-                    _delete(cluster, access_policy_descriptor, access_policy_json)
-        else:
-            configured_access_policy = configured_access_policies[0]
-            if access_policy_json is None:
-                _create(
-                    cluster,
-                    access_policy_descriptor,
-                    configured_access_policy.users,
-                    configured_access_policy.user_groups,
-                    security.users,
-                    security.user_groups,
-                    None)
-            else:
-                _update(
-                    cluster,
-                    access_policy_descriptor,
-                    configured_access_policy.users,
-                    configured_access_policy.user_groups,
-                    security.users,
-                    security.user_groups,
-                    access_policy_json,
-                    current_user_json,
-                    None)
 
 
 def sync_component_policies(cluster: Cluster, security: Security, configured_projects: list):
@@ -135,7 +162,8 @@ def sync_component_policies(cluster: Cluster, security: Security, configured_pro
                         component_type='nifi flow',
                         component_name='root',
                         users=[current_user_json['component']['identity']],
-                        user_groups=[]))
+                        user_groups=[],
+                        inherited=False))
             for access_policy in configured_access_policies:
                 if len([u for u in access_policy.users if u.lower() == current_user_json['component']['identity'].lower()]) == 0:
                     access_policy.users.append(current_user_json['component']['identity'])
@@ -147,26 +175,43 @@ def sync_component_policies(cluster: Cluster, security: Security, configured_pro
                     f'Unable to find component: {configured_access_policy.component_type}/{configured_access_policy.component_name}, in cluster: {cluster.name}.')
             else:
                 access_policy_json = _get_access_policy_json(cluster, access_policy_descriptor, component_id)
-                if access_policy_json is None:
-                    _create(
-                        cluster,
-                        access_policy_descriptor,
-                        configured_access_policy.users,
-                        configured_access_policy.user_groups,
-                        security.users,
-                        security.user_groups,
-                        component_id)
+                inherited_policy = (
+                    not (access_policy_json is None)
+                    and 'componentReference' in access_policy_json['component']
+                    and access_policy_json['component']['componentReference']['id'] != component_id
+                )
+
+                if configured_access_policy.inherited:
+                    if not inherited_policy:
+                        # delete policy override
+                        _delete(cluster, access_policy_descriptor, access_policy_json, component_id)
+                    else:
+                        resource = access_policy_descriptor.resource.replace('{id}', component_id)
+                        logger.info(
+                            f'Access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}, is up-to-date.')
                 else:
-                    _update(
-                        cluster,
-                        access_policy_descriptor,
-                        configured_access_policy.users,
-                        configured_access_policy.user_groups,
-                        security.users,
-                        security.user_groups,
-                        access_policy_json,
-                        current_user_json,
-                        component_id)
+                    if access_policy_json is None or inherited_policy:
+                        # create policy overrride
+                        _create(
+                            cluster,
+                            access_policy_descriptor,
+                            configured_access_policy.users,
+                            configured_access_policy.user_groups,
+                            security.users,
+                            security.user_groups,
+                            component_id)
+                    else:
+                        # update policy override
+                        _update(
+                            cluster,
+                            access_policy_descriptor,
+                            configured_access_policy.users,
+                            configured_access_policy.user_groups,
+                            security.users,
+                            security.user_groups,
+                            access_policy_json,
+                            current_user_json,
+                            component_id)
 
 
 def _create(
@@ -202,14 +247,14 @@ def _create(
                 '/' + url_helper.construct_path_parts(['policies'])), json=create_json)
         if response.status_code != 201:
             logger.warning(
-                f'Unable to create access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
+                f'Unable to create access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
             logger.warning(response.text)
             return
         logger.info(
-            f'Created access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
+            f'Created access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
     except requests.exceptions.RequestException as exception:
         logger.warning(
-            f'Unable to create access policy: {access_policy_descriptor.action}/{resource}, cluster: {cluster.name}.')
+            f'Unable to create access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, cluster: {cluster.name}.')
         logger.warning(exception)
 
 
@@ -257,19 +302,28 @@ def _update(
         try:
             response = requests.put(**cluster._get_connection_details(url), json=current_access_policy_json)
             if response.status_code != 200:
-                logger.warning(f'Unable to update access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
+                logger.warning(f'Unable to update access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
                 logger.warning(response.text)
                 return
-            logger.info(f'Updated access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
+            logger.info(f'Updated access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
         except requests.exceptions.RequestException as exception:
-            logger.warning(f'Unable to update access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
+            logger.warning(f'Unable to update access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}.')
             logger.warning(exception)
     else:
-        logger.info(f'Access policy: {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}, is up-to-date.')
+        logger.info(f'Access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, in cluster: {cluster.name}, is up-to-date.')
 
 
-def _delete(cluster: Cluster, access_policy_descriptor: AccessPolicyDescriptor, delete_access_policy_json):
+def _delete(
+    cluster: Cluster,
+    access_policy_descriptor: AccessPolicyDescriptor,
+    delete_access_policy_json,
+    component_id: str
+):
     logger = logging.getLogger(__name__)
+
+    resource = access_policy_descriptor.resource
+    if component_id:
+        resource = resource.replace('{id}', component_id)
 
     delete_url = '/' + url_helper.construct_path_parts(['policies', delete_access_policy_json['id']])
     try:
@@ -278,14 +332,14 @@ def _delete(cluster: Cluster, access_policy_descriptor: AccessPolicyDescriptor, 
             params={'version': str(delete_access_policy_json['revision']['version'])})
         if response.status_code != 200:
             logger.warning(
-                f'Unable to delete access policy: {access_policy_descriptor.action}/{access_policy_descriptor.resource}, from cluster: {cluster.name}.')
+                f'Unable to delete access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, from cluster: {cluster.name}.')
             logger.warning(response.text)
             return
         logger.info(
-            f'Deleted access policy: {access_policy_descriptor.action}/{access_policy_descriptor.resource}, from cluster: {cluster.name}.')
+            f'Deleted access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, from cluster: {cluster.name}.')
     except requests.exceptions.RequestException as exception:
         logger.warning(
-            f'Unable to delete access policy: {access_policy_descriptor.action}/{access_policy_descriptor.resource}, from cluster: {cluster.name}.')
+            f'Unable to delete access policy ({access_policy_descriptor.name}): {access_policy_descriptor.action}/{resource}, from cluster: {cluster.name}.')
         logger.warning(exception)
 
 
@@ -397,7 +451,7 @@ def _get_access_policy_users_json(policy_users: list, configured_users: list):
         if len(users) > 0:
             users_json.append({
                 'revision': {
-                    'version': 0
+                    'version': users[0].revision_version
                 },
                 'id': users[0].component_id,
                 'component': {
@@ -420,7 +474,7 @@ def _get_access_policy_user_groups_json(policy_user_groups: list, configured_use
         if len(user_groups) > 0:
             users_groups_json.append({
                 'revision': {
-                    'version': 0
+                    'version': user_groups[0].revision_version
                 },
                 'id': user_groups[0].component_id,
                 'component': {

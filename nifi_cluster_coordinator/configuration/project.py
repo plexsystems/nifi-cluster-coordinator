@@ -21,8 +21,8 @@ class ProjectCluster:
                 name=e['name'],
                 description=e['description'],
                 is_coordinated=e['is_coordinated'],
-                version=e['version'],
-                parameter_context_name=e['parameter_context_name'])
+                version=e['version'] if 'version' in e else 'latest',
+                parameter_context_name=e['parameter_context_name'] if 'parameter_context_name' in e else '')
             for e in environments
         ] if not (environments is None) else []
         self.project_process_group_id = ''
