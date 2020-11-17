@@ -17,7 +17,7 @@ def sync(cluster: Cluster, configured_parameter_contexts: list):
             '/' + url_helper.construct_path_parts(['flow', 'parameter-contexts']))).json()
     current_parameter_contexts_json_dict = {context['component']['name']: context for context in response['parameterContexts']}
 
-    for delete_parameter_context_name in list(filter(lambda k: len([pc for pc in desired_parameter_contexts if pc.name.lower() == k.lower()]) == 0, current_parameter_contexts_json_dict.keys())):
+    for delete_parameter_context_name in list(filter(lambda k: len([pc for pc in configured_parameter_contexts if pc.name.lower() == k.lower()]) == 0, current_parameter_contexts_json_dict.keys())):
         _delete(cluster, current_parameter_contexts_json_dict[delete_parameter_context_name])
 
     for parameter_context in desired_parameter_contexts:
