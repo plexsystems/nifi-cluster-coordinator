@@ -28,7 +28,8 @@ def sync(cluster: Cluster, project: Project, project_cluster: ProjectCluster, pa
 
     uncoordinated_environments = list(filter(lambda e: not e.is_coordinated, project_cluster.environments))
     for environment in uncoordinated_environments:
-        environment.process_group_id = current_environments_json_dict[environment.name]['id']
+        if environment.name in current_environments_json_dict:
+            environment.process_group_id = current_environments_json_dict[environment.name]['id']
 
 
 def _create(
