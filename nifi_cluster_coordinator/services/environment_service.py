@@ -154,7 +154,7 @@ def _update(
                 delete_version_url = '/' + url_helper.construct_path_parts(['versions', 'process-groups', environment_json['id']])
                 response = requests.delete(
                     **cluster._get_connection_details(delete_version_url),
-                    params={'clientId': environment_json['revision']['clientId'], 'version': str(environment_json['revision']['version'])})
+                    params={'version': str(environment_json['revision']['version'])})
                 if response.status_code != 200:
                     logger.warning(response.text)
                     return
@@ -191,7 +191,7 @@ def _delete(cluster: Cluster, project: Project, delete_environment_json):
     try:
         response = requests.delete(
             **cluster._get_connection_details(delete_url),
-            params={'clientId': delete_environment_json['revision']['clientId'], 'version': str(delete_environment_json['revision']['version'])})
+            params={'version': str(delete_environment_json['revision']['version'])})
         if response.status_code != 200:
             logger.warning(response.text)
             return
