@@ -65,16 +65,18 @@ def _create(
 
     if environment.parameter_context_name:
         parameter_context = _get_parameter_context_by_name(environment.parameter_context_name, parameter_contexts)
-        if parameter_context is None or parameter_context.id is None:
+        if parameter_context is None or (parameter_context.is_coordinated and parameter_context.id is None):
             logger.warning(f'Unable to find parameter context: {environment.parameter_context_name}, for project: {project.name}, environment: {environment.name}.')
             return
-        create_json['component']['parameterContext'] = {
-            'id': parameter_context.id,
-            'component': {
+
+        if not (parameter_context.id is None):
+            create_json['component']['parameterContext'] = {
                 'id': parameter_context.id,
-                'name': environment.parameter_context_name
+                'component': {
+                    'id': parameter_context.id,
+                    'name': environment.parameter_context_name
+                }
             }
-        }
 
     try:
         response = requests.post(**cluster._get_connection_details(post_url), json=create_json)
@@ -140,17 +142,18 @@ def _update(
 
         if environment.parameter_context_name:
             parameter_context = _get_parameter_context_by_name(environment.parameter_context_name, parameter_contexts)
-            if parameter_context is None or parameter_context.id is None:
-                if parameter_context.is_coordinated:
-                    logger.warning(f'Unable to find parameter context: {environment.parameter_context_name}, for project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
-                    return
-            update_json['component']['parameterContext'] = {
-                'id': parameter_context.id,
-                'component': {
+            if parameter_context is None or (parameter_context.is_coordinated and parameter_context.id is None):
+                logger.warning(f'Unable to find parameter context: {environment.parameter_context_name}, for project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
+                return
+
+            if not (parameter_context.id is None):
+                update_json['component']['parameterContext'] = {
                     'id': parameter_context.id,
-                    'name': environment.parameter_context_name
+                    'component': {
+                        'id': parameter_context.id,
+                        'name': environment.parameter_context_name
+                    }
                 }
-            }
 
         # remove version control to update
         if 'versionControlInformation' in environment_json['component']:
