@@ -150,6 +150,10 @@ def sync_component_policies(cluster: Cluster, security: Security, configured_pro
         configured_access_policies = [
             a for a in security.component_access_policies
             if a.name.lower() == access_policy_descriptor.name.lower()
+            and (
+                len(a.clusters) == 0
+                or len([c for c in a.clusters if c.lower() == cluster.name.lower()]) > 0
+            )
         ]
 
         if access_policy_descriptor.required_by_coordinator:
@@ -163,7 +167,8 @@ def sync_component_policies(cluster: Cluster, security: Security, configured_pro
                         component_name='root',
                         users=[current_user_json['component']['identity']],
                         user_groups=[],
-                        inherited=False))
+                        inherited=False,
+                        clusters=[]))
             for access_policy in configured_access_policies:
                 if len([u for u in access_policy.users if u.lower() == current_user_json['component']['identity'].lower()]) == 0:
                     access_policy.users.append(current_user_json['component']['identity'])
