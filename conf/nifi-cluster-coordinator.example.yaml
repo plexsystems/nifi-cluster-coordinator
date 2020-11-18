@@ -104,6 +104,7 @@ parameter_contexts:
 # Component policy notes:
 # - All component policies are overrides
 # - Set 'inherited' property to 'true' to delete an override
+# - Set 'clusters' array for cluster specific component policies
 #-----------------------------------------------------------------
 security:
   is_coordinated: true
@@ -175,3 +176,5 @@ security:
       component_type: 'environment'
       component_name: 'foo-2-cluster:production'
       inherited: true
+      clusters:
+        - 'foo-cluster'      

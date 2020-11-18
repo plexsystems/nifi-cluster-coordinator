@@ -28,7 +28,8 @@ def sync(cluster: Cluster, project: Project, project_cluster: ProjectCluster, pa
 
     uncoordinated_environments = list(filter(lambda e: not e.is_coordinated, project_cluster.environments))
     for environment in uncoordinated_environments:
-        environment.process_group_id = current_environments_json_dict[environment.name]['id']
+        if environment.name in current_environments_json_dict:
+            environment.process_group_id = current_environments_json_dict[environment.name]['id']
 
 
 def _create(
@@ -64,16 +65,18 @@ def _create(
 
     if environment.parameter_context_name:
         parameter_context = _get_parameter_context_by_name(environment.parameter_context_name, parameter_contexts)
-        if parameter_context is None or parameter_context.id is None:
+        if parameter_context is None or (parameter_context.is_coordinated and parameter_context.id is None):
             logger.warning(f'Unable to find parameter context: {environment.parameter_context_name}, for project: {project.name}, environment: {environment.name}.')
             return
-        create_json['component']['parameterContext'] = {
-            'id': parameter_context.id,
-            'component': {
+
+        if not (parameter_context.id is None):
+            create_json['component']['parameterContext'] = {
                 'id': parameter_context.id,
-                'name': environment.parameter_context_name
+                'component': {
+                    'id': parameter_context.id,
+                    'name': environment.parameter_context_name
+                }
             }
-        }
 
     try:
         response = requests.post(**cluster._get_connection_details(post_url), json=create_json)
@@ -128,36 +131,44 @@ def _update(
         )
 
     ):
-        environment_json['component']['name'] = environment.name
-        environment_json['component']['comments'] = environment.description
-
-        if 'parameterContext' in environment_json['component']:
-            del environment_json['component']['parameterContext']
+        update_json = {
+            'revision': environment_json['revision'],
+            'component': {
+                'id': environment_json['id'],
+                'name': environment.name,
+                'comments': environment.description,
+            }
+        }
 
         if environment.parameter_context_name:
             parameter_context = _get_parameter_context_by_name(environment.parameter_context_name, parameter_contexts)
-            if parameter_context is None or parameter_context.id is None:
+            if parameter_context is None or (parameter_context.is_coordinated and parameter_context.id is None):
                 logger.warning(f'Unable to find parameter context: {environment.parameter_context_name}, for project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
                 return
-            environment_json['component']['parameterContext'] = {
-                'id': parameter_context.id,
-                'component': {
+
+            if not (parameter_context.id is None):
+                update_json['component']['parameterContext'] = {
                     'id': parameter_context.id,
-                    'name': environment.parameter_context_name
+                    'component': {
+                        'id': parameter_context.id,
+                        'name': environment.parameter_context_name
+                    }
                 }
-            }
 
         # remove version control to update
         if 'versionControlInformation' in environment_json['component']:
             try:
                 delete_version_url = '/' + url_helper.construct_path_parts(['versions', 'process-groups', environment_json['id']])
                 response = requests.delete(
-                    **cluster._get_connection_details(delete_version_url),
-                    params={'clientId': environment_json['revision']['clientId'], 'version': str(environment_json['revision']['version'])})
+                    **cluster._get_connection_details(delete_version_url), params=environment_json['revision'])
                 if response.status_code != 200:
                     logger.warning(response.text)
                     return
                 update_version = True
+                # update json with new revision
+                delete_version_response_json = response.json()
+                if 'processGroupRevision' in delete_version_response_json:
+                    update_json['revision'] = delete_version_response_json['processGroupRevision']
             except requests.exceptions.RequestException as exception:
                 logger.warning(f'Unable to temporarily delete version control from project: {project.name}, environment: {environment.name}, in cluster: {cluster.name}.')
                 logger.warning(exception)
@@ -165,7 +176,7 @@ def _update(
 
         try:
             put_url = '/' + url_helper.construct_path_parts(['process-groups', environment_json['id']])
-            response = requests.put(**cluster._get_connection_details(put_url), json=environment_json)
+            response = requests.put(**cluster._get_connection_details(put_url), json=update_json)
             if response.status_code != 200:
                 logger.warning(response.text)
                 return
@@ -189,8 +200,7 @@ def _delete(cluster: Cluster, project: Project, delete_environment_json):
     delete_url = '/' + url_helper.construct_path_parts(['process-groups', delete_environment_json['component']['id']])
     try:
         response = requests.delete(
-            **cluster._get_connection_details(delete_url),
-            params={'clientId': delete_environment_json['revision']['clientId'], 'version': str(delete_environment_json['revision']['version'])})
+            **cluster._get_connection_details(delete_url), params=delete_environment_json['revision'])
         if response.status_code != 200:
             logger.warning(response.text)
             return

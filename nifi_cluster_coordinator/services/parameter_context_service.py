@@ -28,7 +28,8 @@ def sync(cluster: Cluster, configured_parameter_contexts: list):
 
     uncoordinated_parameter_contexts = list(filter(lambda pc: not pc.is_coordinated, configured_parameter_contexts))
     for parameter_context in uncoordinated_parameter_contexts:
-        parameter_context.id = current_parameter_contexts_json_dict[parameter_context.name]['id']
+        if parameter_context.name in current_parameter_contexts_json_dict:
+            parameter_context.id = current_parameter_contexts_json_dict[parameter_context.name]['id']
 
 
 def _create(cluster: Cluster, parameter_context: ParameterContext):

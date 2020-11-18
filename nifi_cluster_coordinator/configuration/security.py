@@ -36,13 +36,22 @@ class GlobalAccessPolicy:
 
 class ComponentAccessPolicy:
 
-    def __init__(self, name: str, component_type: str, component_name: str, users: list, user_groups: list, inherited: bool):
+    def __init__(
+        self, name: str,
+        component_type: str,
+        component_name: str,
+        users: list,
+        user_groups: list,
+        inherited: bool,
+        clusters: list
+    ):
         self.name = name
         self.component_type = component_type
         self.component_name = component_name
         self.users = users if not(users is None) else []
         self.user_groups = user_groups if not(user_groups is None) else []
         self.inherited = inherited
+        self.clusters = clusters if not(clusters is None) else []
 
 
 class Security:
@@ -76,7 +85,8 @@ class Security:
                 component_name=cap['component_name'],
                 users=cap['users'] if 'users' in cap else [],
                 user_groups=cap['user_groups'] if 'user_groups' in cap else [],
-                inherited=cap['inherited'] if 'inherited' in cap else False)
+                inherited=cap['inherited'] if 'inherited' in cap else False,
+                clusters=cap['clusters'] if 'clusters' in cap else [])
             for cap in security['component_access_policies']
         ] if 'component_access_policies' in security and not(security['component_access_policies'] is None) else []
 
