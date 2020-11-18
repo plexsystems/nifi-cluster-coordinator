@@ -30,6 +30,8 @@ def sync(cluster: Cluster, project: Project, project_cluster: ProjectCluster, pa
     for environment in uncoordinated_environments:
         if environment.name in current_environments_json_dict:
             environment.process_group_id = current_environments_json_dict[environment.name]['id']
+        else:
+            environment.process_group_id = ''
 
 
 def _create(
