@@ -30,6 +30,8 @@ def sync(cluster: Cluster, configured_parameter_contexts: list):
     for parameter_context in uncoordinated_parameter_contexts:
         if parameter_context.name in current_parameter_contexts_json_dict:
             parameter_context.id = current_parameter_contexts_json_dict[parameter_context.name]['id']
+        else:
+            parameter_context.id = None
 
 
 def _create(cluster: Cluster, parameter_context: ParameterContext):
