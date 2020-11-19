@@ -1,9 +1,10 @@
 import logging
+import time
+import worker
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-import time
 from os import path
-import worker
+from configuration import config_loader
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +19,11 @@ def _on_deleted(event):
     raise Exception
 
 
-def _on_modified(event):
+def _on_modifiedfile(event):
     logger.debug(event)
     logger.info(f'{event.src_path} was modified.  Processing changes.')
-    worker.process(event.src_path)
+    configuration = config_loader.load_from_file(event.src_path)
+    worker.process(configuration)
 
 
 def _on_moved(event):
@@ -29,7 +31,7 @@ def _on_moved(event):
     raise Exception
 
 
-def watch_configuration(config_file: str):
+def watch_configurationfile(config_file: str):
     directory = path.dirname(config_file)
     logger.debug(f'Directory: {directory}')
     filename = path.basename(config_file)
@@ -43,7 +45,7 @@ def watch_configuration(config_file: str):
     )
     event_handler.on_created = _on_created
     event_handler.on_deleted = _on_deleted
-    event_handler.on_modified = _on_modified
+    event_handler.on_modified = _on_modifiedfile
     event_handler.on_moved = _on_moved
     observer = Observer()
     observer.schedule(event_handler, directory, recursive=False)
@@ -55,3 +57,7 @@ def watch_configuration(config_file: str):
     except KeyboardInterrupt:
         observer.stop()
         observer.join()
+
+
+def watch_configurationfolder(config_folder: str):
+    logger.info('Folder watching has not been implemented yet.')

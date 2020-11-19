@@ -63,3 +63,17 @@ def _build_configuration(config_definition) -> Configuration:
         return config
     except Exception as e:
         logging.critical(f'Error parsing configuration file: {e}')
+
+
+def load_from_folder(config_folder_location: str) -> Configuration:
+    """Return a configuration based on a folder location.
+
+    :param config_folder_location:
+        String of folder path to be read.
+    :returns:
+        Configuration object.
+    """
+    logger = logging.getLogger(__name__)
+    logger.info(f'Attempting to load config from folder {config_folder_location}')
+
+    return None
