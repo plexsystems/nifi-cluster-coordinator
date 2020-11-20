@@ -1,5 +1,8 @@
 import yaml
 import logging
+import os
+import glob
+import hiyapyco
 from .cluster import Cluster
 from .registry import Registry
 from .project import Project
@@ -76,4 +79,18 @@ def load_from_folder(config_folder_location: str) -> Configuration:
     logger = logging.getLogger(__name__)
     logger.info(f'Attempting to load config from folder {config_folder_location}')
 
-    return None
+    if os.path.isdir(config_folder_location) is False:
+        logger.critical(f'{config_folder_location} is not a directory')
+        raise ValueError('Invalid configuration folder specified.')
+
+    os.chdir(config_folder_location)
+    files = glob.glob('*.yaml')
+    files.extend(glob.glob('*.yml'))
+    files = set(files) - set(glob.glob('*example*'))
+    for file in files:
+        logger.info(f'Found file {file}')
+
+    # Forcing INFO level logging here, debug will print file contents which might leak secrets
+    conf = hiyapyco.load(list(files), method=hiyapyco.METHOD_MERGE, mergelists=False, loglevel='INFO')
+    configuration = _build_configuration(yaml.safe_load(hiyapyco.dump(conf)))
+    return configuration

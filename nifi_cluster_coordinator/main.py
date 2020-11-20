@@ -23,7 +23,7 @@ def main(args):
         try:
             configuration = config_loader.load_from_folder(args.configfolder)
         except Exception as exception:
-            logger.crigial(f'Error loading configuration: {exception}')
+            logger.critical(f'Error loading configuration: {exception}')
             raise
 
     worker.process(configuration)

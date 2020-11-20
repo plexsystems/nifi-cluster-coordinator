@@ -1,0 +1,10 @@
+# The cooridnator 
+parameter_contexts:
+  - name: 'foo-context2'
+    description: foo-context2
+    is_coordinated: true
+    parameters:
+      - name: foo-secret
+        description: 'secret foo'
+        is_sensitive: true
+        value: 'nooooo'
