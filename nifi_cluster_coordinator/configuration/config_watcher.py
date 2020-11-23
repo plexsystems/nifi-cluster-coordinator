@@ -29,7 +29,8 @@ def _on_modifiedfile(event):
 def _on_modifiedfolder(event):
     logger.debug(event)
     logger.info(f'{event.src_path} was modified.  Processing changes.')
-    configuration = config_loader.load_from_folder(event)
+    directory = path.dirname(event.src_path)
+    configuration = config_loader.load_from_folder(directory)
     worker.process(configuration)
 
 
@@ -59,11 +60,11 @@ def watch_configurationfile(config_file: str):
 
 
 def watch_configurationfolder(config_folder: str):
-    directory = path.dirname(config_folder)
+    directory = path.normpath(config_folder)
     logger.debug(f'Directory: {directory}')
 
     event_handler = PatternMatchingEventHandler(
-        patterns=['*/home/phstockton/dev/edp/nifi-cluster-coordinator/conf/nifi-cluster-coordinator.yaml'],
+        patterns=['*.yaml', '*.yml'],
         ignore_patterns=['*.example.yaml'],
         ignore_directories=True,
         case_sensitive=True
