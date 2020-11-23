@@ -10,7 +10,7 @@ def main(args):
     if args.configfile is None and args.configfolder is None:
         raise ValueError('No configuration file(s) specified')
     if args.configfile is not None and args.configfolder is not None:
-        raise ValueError('Please specify either a single config file or a folder.')
+        raise ValueError('Please specify either a single config file or a folder, not both.')
 
     if args.configfile is not None:
         try:
