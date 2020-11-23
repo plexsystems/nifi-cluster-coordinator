@@ -46,9 +46,13 @@ The `nifi-cluster-coordinator` is a `python` program which accepts a few command
 
 This may be set to `DEBUG`, `INFORMATION`, `WARNING`, `CRITICAL`.  The default level is `INFORMATION`.
 
-`--configfile /path/to/file.yaml` (required)
+`--configfile /path/to/file.yaml` (optional)
 
 The location on disk of the config file that you want nifi-cluster-coordinator to read and process.
+
+`--configfolder /path/to/folder/` (optional)
+
+The location on disk of a folder of `.yaml` files to watch.  This will allow you to split configuration across multiple files.
 
 `--watch` (optional)
 

@@ -10,8 +10,11 @@ cryptography==3.2
 flake8==3.8.3
 flake8-print==3.1.4
 flake8-quotes==3.2.0
+HiYaPyCo==0.4.16
 humanfriendly==8.2
 idna==2.10
+Jinja2==2.11.2
+MarkupSafe==1.1.1
 mccabe==0.6.1
 more-itertools==8.4.0
 packaging==20.4

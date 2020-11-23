@@ -1,5 +1,5 @@
 import logging
-from configuration import config_loader
+from configuration.config_loader import Configuration
 import services.registry_service as registry_service
 import services.project_service as project_service
 import services.parameter_context_service as parameter_context_service
@@ -8,12 +8,10 @@ import services.user_group_service as user_group_service
 import services.access_policy_service as access_policy_service
 
 
-def process(configfile):
+def process(configuration: Configuration):
     logger = logging.getLogger(__name__)
 
     try:
-        configuration = config_loader.load_from_file(configfile)
-
         if configuration.security.is_coordinated:
             access_policy_service.init_access_policies_descriptors()
 
