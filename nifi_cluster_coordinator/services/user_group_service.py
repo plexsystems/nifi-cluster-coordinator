@@ -69,7 +69,9 @@ def _create(cluster: Cluster, user_group: UserGroup, configured_users: list):
             logger.warning(response.text)
             return
 
-        user_group.component_id = response.json()['id']
+        response_json = response.json()
+        user_group.component_id = response_json['id']
+        user_group.revision_version = response_json['revision']['version']
         logger.info(f'Created user group: {user_group.identity}, in cluster: {cluster.name}.')
     except requests.exceptions.RequestException as exception:
         logger.warning(f'Unable to create user group: {user_group.identity}, cluster: {cluster.name}.')

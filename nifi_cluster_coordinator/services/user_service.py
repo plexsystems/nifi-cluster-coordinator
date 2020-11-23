@@ -60,7 +60,9 @@ def _create(cluster: Cluster, user: User):
             logger.warning(response.text)
             return
 
-        user.component_id = response.json()['id']
+        response_json = response.json()
+        user.component_id = response_json['id']
+        user.revision_version = response_json['revision']['version']
         logger.info(f'Created user: {user.identity}, in cluster: {cluster.name}.')
     except requests.exceptions.RequestException as exception:
         logger.warning(f'Unable to create user: {user.identity}, cluster: {cluster.name}.')
